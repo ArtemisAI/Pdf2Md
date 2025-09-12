@@ -11,6 +11,10 @@ export const YouTubeToMarkdownTool = ToolSchema.parse({
         type: "string",
         description: "URL of the YouTube video",
       },
+      uvPath: {
+        type: "string",
+        description: "Path to the uv executable (optional, defaults to 'uv')",
+      },
     },
     required: ["url"],
   },
@@ -25,6 +29,10 @@ export const PDFToMarkdownTool = ToolSchema.parse({
       filepath: {
         type: "string",
         description: "Absolute path of the PDF file to convert",
+      },
+      uvPath: {
+        type: "string",
+        description: "Path to the uv executable (optional, defaults to 'uv')",
       },
     },
     required: ["filepath"],
@@ -41,6 +49,10 @@ export const BingSearchResultToMarkdownTool = ToolSchema.parse({
         type: "string",
         description: "URL of the Bing search results page",
       },
+      uvPath: {
+        type: "string",
+        description: "Path to the uv executable (optional, defaults to 'uv')",
+      },
     },
     required: ["url"],
   },
@@ -55,6 +67,10 @@ export const WebpageToMarkdownTool = ToolSchema.parse({
       url: {
         type: "string",
         description: "URL of the webpage to convert",
+      },
+      uvPath: {
+        type: "string",
+        description: "Path to the uv executable (optional, defaults to 'uv')",
       },
     },
     required: ["url"],
@@ -72,6 +88,10 @@ export const ImageToMarkdownTool = ToolSchema.parse({
         type: "string",
         description: "Absolute path of the image file to convert",
       },
+      uvPath: {
+        type: "string",
+        description: "Path to the uv executable (optional, defaults to 'uv')",
+      },
     },
     required: ["filepath"],
   },
@@ -88,6 +108,10 @@ export const AudioToMarkdownTool = ToolSchema.parse({
         type: "string",
         description: "Absolute path of the audio file to convert",
       },
+      uvPath: {
+        type: "string",
+        description: "Path to the uv executable (optional, defaults to 'uv')",
+      },
     },
     required: ["filepath"],
   },
@@ -102,6 +126,10 @@ export const DocxToMarkdownTool = ToolSchema.parse({
       filepath: {
         type: "string",
         description: "Absolute path of the DOCX file to convert",
+      },
+      uvPath: {
+        type: "string",
+        description: "Path to the uv executable (optional, defaults to 'uv')",
       },
     },
     required: ["filepath"],
@@ -118,6 +146,10 @@ export const XlsxToMarkdownTool = ToolSchema.parse({
         type: "string",
         description: "Absolute path of the XLSX file to convert",
       },
+      uvPath: {
+        type: "string",
+        description: "Path to the uv executable (optional, defaults to 'uv')",
+      },
     },
     required: ["filepath"],
   },
@@ -132,6 +164,10 @@ export const PptxToMarkdownTool = ToolSchema.parse({
       filepath: {
         type: "string",
         description: "Absolute path of the PPTX file to convert",
+      },
+      uvPath: {
+        type: "string",
+        description: "Path to the uv executable (optional, defaults to 'uv')",
       },
     },
     required: ["filepath"],

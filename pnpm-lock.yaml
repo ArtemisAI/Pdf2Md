@@ -27,9 +27,6 @@ importers:
       bun:
         specifier: ^1.1.41
         version: 1.1.42
-      sdk:
-        specifier: link:@types/modelcontextprotocol/sdk
-        version: link:@types/modelcontextprotocol/sdk
       shx:
         specifier: ^0.3.4
         version: 0.3.4

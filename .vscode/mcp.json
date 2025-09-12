@@ -1,0 +1,14 @@
+   {
+  "servers": {
+    "Pdf2Md": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "tsx",
+        "G:/projects/_Tools/_MCP/Pdf2Md/src/index.ts"
+      ],
+      "type": "stdio"
+    }
+  },
+  "inputs": []
+}

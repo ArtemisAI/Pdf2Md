@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "Pdf2Md": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "tsx",
+        "G:/projects/_Tools/_MCP/Pdf2Md/src/index.ts"
+      ],
+      "type": "stdio",
+      "alwaysAllow": [
+        "audio-to-markdown",
+        "bing-search-to-markdown",
+        "docx-to-markdown",
+        "get-markdown-file",
+        "image-to-markdown",
+        "pdf-to-markdown",
+        "pptx-to-markdown",
+        "webpage-to-markdown",
+        "xlsx-to-markdown",
+        "youtube-to-markdown"
+      ],
+      "timeout": 300
+    }
+  }
+}

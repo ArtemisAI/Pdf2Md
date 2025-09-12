@@ -22,28 +22,18 @@ export class Markdownify {
     projectRoot: string,
     uvPath: string,
   ): Promise<string> {
-    const venvPath = path.join(projectRoot, ".venv");
-    const markitdownPath = path.join(
-      venvPath,
-      process.platform === "win32" ? "Scripts" : "bin",
-      `markitdown${process.platform === "win32" ? ".exe" : ""}`,
-    );
-
-    if (!fs.existsSync(markitdownPath)) {
-      throw new Error("markitdown executable not found");
-    }
-
     // Expand tilde in uvPath if present
     const expandedUvPath = expandHome(uvPath);
 
-    // Use execFile to prevent command injection
+    // Use uv to run markitdown from installed packages
     const { stdout, stderr } = await execFileAsync(expandedUvPath, [
       "run",
-      markitdownPath,
+      "markitdown",
       filePath,
     ]);
 
-    if (stderr) {
+    // Ignore stderr if it only contains ResourceWarning
+    if (stderr && !stderr.includes('ResourceWarning')) {
       throw new Error(`Error executing command: ${stderr}`);
     }
 
@@ -75,7 +65,7 @@ export class Markdownify {
     filePath,
     url,
     projectRoot = path.resolve(__dirname, ".."),
-    uvPath = "~/.local/bin/uv",
+  uvPath = "uv",
   }: {
     filePath?: string;
     url?: string;
