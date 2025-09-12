@@ -2,3 +2,5 @@ node_modules
 dist
 .venv
 *.pdf
+test_*.js
+performance_verification.js

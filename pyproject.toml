@@ -10,7 +10,16 @@ dependencies = [
     "torch>=2.1.0",
     "torchaudio>=2.1.0",
     "transformers>=4.36.0",
-    "faster-whisper>=0.10.0",
+    "faster-whisper>=1.0.0",
     "datasets",
     "accelerate",
+    "pynvml",
+    "GPUtil",
+]
+
+[project.optional-dependencies]
+gpu = [
+    "torch==2.4.0+cu121",
+    "torchaudio==2.4.0+cu121",
+    "faster-whisper[gpu]>=1.0.0",
 ]
