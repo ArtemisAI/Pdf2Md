@@ -1,10 +1,37 @@
-# Audio Transcription Test Files
+# Test Files for Pdf2Md MCP Server
 
-This directory contains test files and results for the GPU-accelerated audio transcription system.
+This directory contains test files and datasets for validating the Pdf2Md MCP server functionality.
 
 ## 📁 Directory Structure
 
-### `/audio_samples/`
+### 🎤 Audio Enhancement Testing
+- **`audio_samples/`** - Small MP3 files for GitHub CI testing
+- **`cv_sample/`** - Common Voice dataset samples (15 files)
+- **`gpu_acceleration/`** - GPU acceleration test suite
+
+### 📄 Document Testing  
+- **`test_document.docx`** - Word document test file
+- **`test_pdf.pdf`** - PDF document test file
+- **`test_presentation.pptx`** - PowerPoint test file
+- **`test_spreadsheet.xlsx`** - Excel test file
+
+### 🌐 Web Content Testing
+- **`test_webpage.txt`** - Webpage conversion test
+- **`test_youtube.txt`** - YouTube transcript test
+- **`test_bing_search.txt`** - Bing search results test
+
+### �️ Image Testing
+- **`test_image.jpg`** - Image to markdown test
+- **`Test_3.jpg`** - Additional image test
+
+### 📊 Results & Documentation
+- **`results/`** - Test output results
+- **`documentation/`** - Test documentation
+- **`ocr_output.txt.txt`** - OCR test output
+
+## 🚀 GPU Enhancement Testing
+
+### Audio Samples Overview
 - Real audio samples from Common Voice dataset
 - 15 representative MP3 files (29KB - 60KB each)
 - Various audio lengths (3-5 seconds)

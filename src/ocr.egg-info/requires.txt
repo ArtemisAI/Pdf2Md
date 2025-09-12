@@ -1,7 +1,7 @@
 markitdown>=0.0.1a3
 openai-whisper
-torch>=2.1.0
-torchaudio>=2.1.0
+torch==2.1.0+cu121
+torchaudio==2.1.0+cu121
 transformers>=4.36.0
 faster-whisper>=0.10.0
 datasets

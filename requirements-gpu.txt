@@ -1,0 +1,23 @@
+# GPU-accelerated audio transcription dependencies
+# For CUDA 12.1 with cuDNN 9.x support
+
+# Core PyTorch with CUDA support
+torch>=2.4.0+cu121
+torchaudio>=2.4.0+cu121
+
+# faster-whisper for GPU-accelerated transcription
+faster-whisper>=1.0.0
+
+# NVIDIA libraries for CUDA 12 compatibility
+nvidia-cublas-cu12>=12.9.1.4
+nvidia-cudnn-cu12>=9.13.0.50,<10.0.0
+
+# System monitoring and utilities
+psutil>=5.9.0
+
+# Testing dependencies
+pytest>=7.0.0
+GPUtil>=1.4.0
+
+# Optional: CPU fallback (automatically installed with faster-whisper)
+# ctranslate2>=4.0.0

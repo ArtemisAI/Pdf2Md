@@ -1,4 +1,4 @@
-Metadata-Version: 2.4
+Metadata-Version: 2.1
 Name: ocr
 Version: 0.1.0
 Summary: Add your description here
@@ -7,13 +7,12 @@ Description-Content-Type: text/markdown
 License-File: LICENSE
 Requires-Dist: markitdown>=0.0.1a3
 Requires-Dist: openai-whisper
-Requires-Dist: torch>=2.1.0
-Requires-Dist: torchaudio>=2.1.0
+Requires-Dist: torch==2.1.0+cu121
+Requires-Dist: torchaudio==2.1.0+cu121
 Requires-Dist: transformers>=4.36.0
 Requires-Dist: faster-whisper>=0.10.0
 Requires-Dist: datasets
 Requires-Dist: accelerate
-Dynamic: license-file
 
 # Markdownify MCP Server
 

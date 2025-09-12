@@ -2,3 +2,70 @@ node_modules
 dist
 .venv
 *.pdf
+
+# Python cache and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+.conda/
+
+# Audio and large files
+*.wav
+*.mp3
+*.flac
+*.m4a
+*.aac
+*.ogg
+*.wma
+
+# Dataset files (use Git LFS for large datasets)
+*.tar.gz
+*.zip
+*.7z
+tests/Audio_Test_Files/extracted/
+tests/Audio_Test_Files/samples/
+
+# Archive folder for temporary files and tests
+_archive/
+
+# Test outputs and temporary files
+test_*.py
+*_test.py
+benchmark_*.py
+*.tmp
+*.temp
+
+# GPU and CUDA related
+*.ptx
+*.cubin
+*.fatbin
+
+# IDE and editor files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Log files
+*.log
+logs/
+
+# Model cache
+.cache/
+models/
+huggingface_cache/
