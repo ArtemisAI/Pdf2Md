@@ -122,6 +122,10 @@ export interface TranscriptionResult {
   duration?: number;
   language?: string;
   confidence?: number;
+  device?: string;
+  real_time_factor?: number;
+  processing_time?: number;
+  performance_category?: string;
 }
 
 export interface AudioTranscriptionOptions {

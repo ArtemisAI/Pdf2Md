@@ -128,7 +128,44 @@ export function createServer() {
                 isError: false,
               };
             } else {
-              // Sync mode: use the existing Markdownify system for compatibility
+              // Sync mode: Try GPU acceleration first, fall back to markitdown
+              try {
+                const { detectGPU } = await import('./utils.js');
+                const gpuInfo = await detectGPU(enhancedArgs.uvPath || process.env.UV_PATH);
+                
+                if (gpuInfo.available) {
+                  // Use GPU acceleration
+                  const { EnhancedAudioTranscription } = await import('./audio/EnhancedAudioTranscription.js');
+                  const transcriber = new EnhancedAudioTranscription({
+                    modelSize: enhancedArgs.modelSize || 'tiny',
+                    device: enhancedArgs.device || 'auto'
+                  });
+                  
+                  const transcriptionResult = await transcriber.transcribe({
+                    filepath: enhancedArgs.filepath,
+                    language: enhancedArgs.language,
+                    uvPath: enhancedArgs.uvPath || process.env.UV_PATH
+                  });
+                  
+                  const outputPath = await saveToTempFile(transcriptionResult.text);
+                  
+                  return {
+                    content: [
+                      { type: "text", text: `Enhanced GPU audio transcription completed` },
+                      { type: "text", text: `Output file: ${outputPath}` },
+                      { type: "text", text: `Device: ${transcriptionResult.device || 'GPU'}` },
+                      { type: "text", text: `Performance: ${transcriptionResult.real_time_factor ? transcriptionResult.real_time_factor.toFixed(1) + 'x real-time' : 'optimized'}` },
+                      { type: "text", text: `Transcribed content:` },
+                      { type: "text", text: transcriptionResult.text },
+                    ],
+                    isError: false,
+                  };
+                }
+              } catch (error) {
+                console.warn('GPU transcription failed, falling back to markitdown:', error instanceof Error ? error.message : 'Unknown error');
+              }
+              
+              // Fallback to regular markitdown
               const result = await Markdownify.toMarkdown({
                 filePath: enhancedArgs.filepath,
                 projectRoot: validatedArgs.projectRoot,
@@ -137,9 +174,9 @@ export function createServer() {
 
               return {
                 content: [
-                  { type: "text", text: `Enhanced audio transcription completed (sync mode)` },
+                  { type: "text", text: `Audio transcription completed (CPU fallback)` },
                   { type: "text", text: `Output file: ${result.path}` },
-                  { type: "text", text: `Note: For GPU optimization, use asyncMode: true` },
+                  { type: "text", text: `Note: GPU acceleration unavailable, used markitdown fallback` },
                   { type: "text", text: `Transcribed content:` },
                   { type: "text", text: result.text },
                 ],

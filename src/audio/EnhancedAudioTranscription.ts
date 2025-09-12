@@ -12,6 +12,7 @@ import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import { fileURLToPath } from 'url';
 
 const execFileAsync = promisify(execFile);
 
@@ -129,235 +130,63 @@ export class EnhancedAudioTranscription {
   }
   
   /**
-   * Execute the actual transcription using UV and Python
+   * Execute the actual transcription using GPU-accelerated Python script
    */
   private async executeTranscription(
     options: AudioTranscriptionOptions,
     tracker: TranscriptionProgressTracker
   ): Promise<string> {
-    tracker.stage('loading_model', 'Loading RTX 3060 optimized transcription model...');
+    tracker.stage('loading_model', 'Loading GPU-optimized transcription model...');
     
-    // Create Python script for enhanced transcription
-    const pythonScript = await this.createEnhancedTranscriptionScript(options.filepath, options.language);
+    // Get the GPU transcription script path
+    const currentDir = path.dirname(fileURLToPath(import.meta.url));
+    const scriptPath = path.join(currentDir, '..', 'gpu_transcribe.py');
     
-    tracker.update(40, 'Python transcription script prepared');
+    tracker.update(40, 'Using faster-whisper GPU script');
     
     // Execute enhanced transcription via UV
     const uvPath = options.uvPath || 'uv';
     
     tracker.stage('transcribing', 'Executing GPU-optimized transcription...');
     
+    // Build command arguments
+    const args = [
+      'run', 'python', scriptPath,
+      options.filepath,
+      '--format', 'markdown',
+      '--model-size', this.currentConfig.modelSize || 'tiny',
+      '--device', this.currentConfig.device || 'auto'
+    ];
+    
+    if (options.language) {
+      args.push('--language', options.language);
+    }
+    
     try {
-      const { stdout, stderr } = await execFileAsync(uvPath, [
-        'run',
-        'python',
-        pythonScript
-      ], {
+      const { stdout, stderr } = await execFileAsync(uvPath, args, {
         timeout: 300000, // 5 minute timeout
-        maxBuffer: 10 * 1024 * 1024 // 10MB buffer for large transcriptions
+        maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large transcriptions
+        env: {
+          ...process.env,
+          KMP_DUPLICATE_LIB_OK: 'TRUE',
+          OMP_NUM_THREADS: '4'
+        }
       });
-      
-      // Clean up temporary script
-      await fs.promises.unlink(pythonScript);
       
       tracker.update(90, 'Transcription completed, processing results...');
       
-      // Parse result
-      const result = this.parseTranscriptionResult(stdout);
+      // Return the markdown content directly
+      const result = stdout.trim();
       
-      if (stderr && !stderr.includes('ResourceWarning')) {
+      if (stderr && !stderr.includes('ResourceWarning') && !stderr.includes('Loading') && !stderr.includes('Model loaded')) {
         console.warn('Transcription stderr:', stderr);
       }
       
       return result;
       
     } catch (error) {
-      // Clean up on error
-      try {
-        await fs.promises.unlink(pythonScript);
-      } catch {}
-      
       throw error;
     }
-  }
-  
-  /**
-   * Create enhanced Python transcription script optimized for RTX 3060
-   */
-  private async createEnhancedTranscriptionScript(audioPath: string, language?: string): Promise<string> {
-    const actualLanguage = language || this.currentConfig.language;
-    const scriptContent = `
-import sys
-import torch
-import torchaudio
-import warnings
-from transformers import pipeline, AutoModelForSpeechSeq2Seq, AutoProcessor
-import json
-import os
-import gc
-from pathlib import Path
-
-# Suppress warnings
-warnings.filterwarnings("ignore")
-
-def detect_optimal_device():
-    """Detect optimal device configuration for RTX 3060 (12GB VRAM)"""
-    if torch.cuda.is_available():
-        device = "cuda:0"
-        torch_dtype = torch.float16
-        
-        try:
-            gpu_props = torch.cuda.get_device_properties(0)
-            gpu_memory = gpu_props.total_memory / (1024**3)
-            gpu_name = gpu_props.name.lower()
-            
-            print(f"Detected GPU: {gpu_props.name} with {gpu_memory:.1f}GB VRAM", file=sys.stderr)
-            
-            # RTX 3060 specific optimizations
-            if "rtx 3060" in gpu_name or gpu_memory >= 12:
-                return {
-                    'device': device,
-                    'torch_dtype': torch_dtype,
-                    'batch_size': ${this.currentConfig.batch_size},
-                    'model_size': '${this.currentConfig.modelSize}',
-                    'gpu_optimized': True
-                }
-            elif gpu_memory >= 8:
-                return {
-                    'device': device,
-                    'torch_dtype': torch_dtype,
-                    'batch_size': ${Math.max(4, this.currentConfig.batch_size - 2)},
-                    'model_size': 'small',
-                    'gpu_optimized': True
-                }
-            elif gpu_memory >= 6:
-                return {
-                    'device': device,
-                    'torch_dtype': torch_dtype,
-                    'batch_size': 4,
-                    'model_size': 'base',
-                    'gpu_optimized': True
-                }
-        except Exception as e:
-            print(f"GPU detection error: {e}", file=sys.stderr)
-    
-    # CPU fallback
-    print("Using CPU fallback", file=sys.stderr)
-    return {
-        'device': 'cpu',
-        'torch_dtype': torch.float32,
-        'batch_size': 4,
-        'model_size': 'base',
-        'gpu_optimized': False
-    }
-
-def transcribe_audio(audio_path, config):
-    """Enhanced audio transcription with RTX 3060 GPU optimization"""
-    try:
-        model_id = f"openai/whisper-{config['model_size']}"
-        print(f"Loading model: {model_id}", file=sys.stderr)
-        
-        # Load model with optimized settings
-        model = AutoModelForSpeechSeq2Seq.from_pretrained(
-            model_id,
-            torch_dtype=config['torch_dtype'],
-            low_cpu_mem_usage=True,
-            use_safetensors=True
-        )
-        model.to(config['device'])
-        
-        processor = AutoProcessor.from_pretrained(model_id)
-        
-        print(f"Creating pipeline with batch_size={config['batch_size']}", file=sys.stderr)
-        
-        # Create optimized pipeline
-        pipe = pipeline(
-            "automatic-speech-recognition",
-            model=model,
-            tokenizer=processor.tokenizer,
-            feature_extractor=processor.feature_extractor,
-            max_new_tokens=${this.currentConfig.max_new_tokens},
-            chunk_length_s=${this.currentConfig.chunk_length_s},
-            batch_size=config['batch_size'],
-            torch_dtype=config['torch_dtype'],
-            device=config['device'],
-            return_timestamps=${this.currentConfig.without_timestamps ? 'False' : 'True'}
-        )
-        
-        print("Starting transcription...", file=sys.stderr)
-        
-        # Transcribe audio with RTX 3060 optimized settings
-        result = pipe(
-            audio_path,
-            generate_kwargs={
-                "language": "${actualLanguage}",
-                "temperature": ${this.currentConfig.temperature},
-                "compression_ratio_threshold": ${this.currentConfig.compression_ratio_threshold},
-                "logprob_threshold": ${this.currentConfig.logprob_threshold},
-                "no_speech_threshold": ${this.currentConfig.no_speech_threshold},
-                "condition_on_previous_text": ${this.currentConfig.condition_on_previous_text}
-            }
-        )
-        
-        # Clean up GPU memory
-        if config['device'].startswith('cuda'):
-            torch.cuda.empty_cache()
-            gc.collect()
-        
-        print("Transcription completed successfully", file=sys.stderr)
-        return result["text"]
-        
-    except Exception as e:
-        print(f"Transcription error: {str(e)}", file=sys.stderr)
-        raise
-
-def main():
-    try:
-        audio_path = "${audioPath.replace(/\\/g, '\\\\')}"
-        
-        print(f"Processing audio file: {audio_path}", file=sys.stderr)
-        
-        # Detect optimal configuration for RTX 3060
-        config = detect_optimal_device()
-        
-        print(f"Using configuration: {config}", file=sys.stderr)
-        
-        # Transcribe audio
-        transcription = transcribe_audio(audio_path, config)
-        
-        # Output result
-        print(transcription)
-        
-    except Exception as e:
-        print(f"Script error: {str(e)}", file=sys.stderr)
-        sys.exit(1)
-
-if __name__ == "__main__":
-    main()
-`;
-    
-    const tempScriptPath = path.join(os.tmpdir(), `enhanced_rtx3060_transcription_${Date.now()}.py`);
-    await fs.promises.writeFile(tempScriptPath, scriptContent);
-    
-    return tempScriptPath;
-  }
-  
-  /**
-   * Parse transcription result from Python output
-   */
-  private parseTranscriptionResult(stdout: string): string {
-    const lines = stdout.trim().split('\n');
-    
-    // The last non-empty line should be the transcription
-    for (let i = lines.length - 1; i >= 0; i--) {
-      const line = lines[i].trim();
-      if (line && !line.startsWith('Loading') && !line.startsWith('Using') && 
-          !line.startsWith('Detected') && !line.startsWith('Creating')) {
-        return line;
-      }
-    }
-    
-    throw new Error('No transcription result found in output');
   }
   
   /**
