@@ -1,19 +1,33 @@
 {
+  "inputs": [
+    {
+      "id": "pdf2md-input",
+      "type": "promptString",
+      "description": "Input configuration for Pdf2Md MCP server"
+    }
+  ],
   "servers": {
     "Pdf2Md": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "tsx",
-        "G:/projects/_Tools/_MCP/Pdf2Md/src/index.ts"
+        "dist/index.js"
       ],
-      "type": "stdio"
+      "type": "stdio",
+      "env": {
+        "KMP_DUPLICATE_LIB_OK": "TRUE",
+        "OMP_NUM_THREADS": "4",
+        "UV_PATH": "uv",
+        "NODE_ENV": "development"
+      }
     },
     "huggingface": {
       "url": "https://hf.co/mcp",
       "type": "http"
+    },
+    "github": {
+      "url": "https://api.githubcopilot.com/mcp/",
+      "type": "http"
     }
-  },
-  "inputs": []
+  }
 }
     

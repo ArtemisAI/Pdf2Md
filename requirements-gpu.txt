@@ -1,22 +1,38 @@
-# GPU-accelerated audio transcription dependencies
-# For CUDA 12.1 with cuDNN 9.x support
+# GPU-accelerated audio transcription dependencies for Pdf2Md MCP Server
+# Optimized for RTX 3060 and CUDA 12.1 support
 
 # Core PyTorch with CUDA support
 torch>=2.4.0+cu121
 torchaudio>=2.4.0+cu121
 
-# faster-whisper for GPU-accelerated transcription
+# Transformers and Whisper models
+transformers>=4.36.0
+accelerate>=0.24.0
+
+# Enhanced Whisper for GPU acceleration
 faster-whisper>=1.0.0
 
-# NVIDIA libraries for CUDA 12 compatibility
+# Audio processing libraries
+pydub>=0.25.1
+ffmpeg-python>=0.2.0
+librosa>=0.10.0
+soundfile>=0.12.1
+
+# GPU memory management
+nvidia-ml-py>=12.0.0; sys_platform != 'darwin'
+psutil>=5.9.0
+
+# NVIDIA CUDA libraries (for CUDA 12.1 compatibility)
 nvidia-cublas-cu12>=12.9.1.4
 nvidia-cudnn-cu12>=9.13.0.50,<10.0.0
 
-# System monitoring and utilities
-psutil>=5.9.0
+# Additional dependencies for enhanced audio processing
+numpy>=1.24.0
+scipy>=1.10.0
 
-# Testing dependencies
+# Development and testing
 pytest>=7.0.0
+pytest-asyncio>=0.21.0
 GPUtil>=1.4.0
 
 # Optional: CPU fallback (automatically installed with faster-whisper)

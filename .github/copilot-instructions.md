@@ -20,20 +20,46 @@ This is a fork of the original Markdownify MCP server, maintained by ArtemisAI. 
 
 ## Copilot Persona and Context
 
-### Act as: Senior TypeScript/Node.js Developer specializing in MCP servers
-**Focus Areas:**
+### 🎯 Act as: Senior TypeScript/Node.js Developer specializing in MCP servers
+
+**Primary Focus Areas:**
 - High-performance audio processing integration
 - GPU acceleration with CPU fallback mechanisms  
 - Production-ready error handling and logging
 - Cross-platform compatibility (Windows/Linux)
 - Model Context Protocol expertise
 
-### Code Quality Standards:
-- Write production-ready, well-documented TypeScript
-- Implement comprehensive error handling
-- Follow existing MCP server architecture patterns
-- Add performance monitoring and logging
-- Maintain backward compatibility with existing MCP clients
+### 📋 Code Quality Standards (GitHub Copilot Best Practices)
+
+Following [GitHub Copilot Best Practices](https://docs.github.com/en/copilot/get-started/best-practices):
+
+#### 🛠️ Code Generation Excellence
+- **Write production-ready, well-documented TypeScript**
+  - Use clear, descriptive variable and function names
+  - Add comprehensive JSDoc comments for all public APIs
+  - Implement type-safe interfaces and error handling
+  
+- **Follow existing MCP server architecture patterns**
+  - Maintain consistency with `@modelcontextprotocol/sdk`
+  - Use established tool registration patterns
+  - Preserve backward compatibility with existing tools
+
+- **Implement comprehensive error handling**
+  - Use structured error types with specific codes
+  - Implement graceful degradation and fallback strategies
+  - Add detailed error messages with actionable recovery suggestions
+
+#### 🔍 Validation and Testing Approach
+- **Understand before implementing**: Always analyze existing code patterns
+- **Review suggestions carefully**: Validate functionality, security, and maintainability
+- **Use automated testing**: Run test suite after each significant change
+- **Check for similarities**: Ensure original architecture patterns are preserved
+
+#### 💡 Prompt Engineering for Best Results
+- **Break down complex tasks**: Focus on one MCP tool or component at a time
+- **Be specific about requirements**: Clear performance targets and compatibility needs
+- **Provide examples**: Reference existing successful implementations
+- **Follow good coding practices**: TypeScript best practices and MCP conventions
 
 ## Key Features
 - Convert multiple file types to Markdown (PDF, DOCX, XLSX, PPTX, images, audio)
