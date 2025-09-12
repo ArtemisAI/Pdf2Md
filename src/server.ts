@@ -9,12 +9,27 @@ import * as tools from "./tools.js";
 import { CallToolRequest } from "@modelcontextprotocol/sdk/types.js";
 import is_ip_private from "private-ip";
 import { URL } from "node:url";
+import { transcribeAudio, getTaskStatus, ConfigManager, ProgressReporter } from "./audio/index.js";
+import { saveToTempFile } from "./utils.js";
 
 const RequestPayloadSchema = z.object({
   filepath: z.string().optional(),
   url: z.string().optional(),
   projectRoot: z.string().optional(),
   uvPath: z.string().optional(),
+});
+
+const EnhancedAudioRequestSchema = z.object({
+  filepath: z.string(),
+  language: z.string().optional(),
+  modelSize: z.enum(["tiny", "base", "small", "medium", "large", "large-v2", "large-v3"]).optional(),
+  device: z.enum(["auto", "cpu", "cuda", "cuda:0"]).optional(),
+  asyncMode: z.boolean().optional(),
+  uvPath: z.string().optional(),
+});
+
+const TaskStatusRequestSchema = z.object({
+  taskId: z.string(),
 });
 
 export function createServer() {
@@ -83,6 +98,124 @@ export function createServer() {
               projectRoot: validatedArgs.projectRoot,
               uvPath: validatedArgs.uvPath || process.env.UV_PATH,
             });
+            break;
+
+          case tools.EnhancedAudioToMarkdownTool.name:
+            {
+              const audioArgs = EnhancedAudioRequestSchema.parse(args);
+              
+              if (audioArgs.asyncMode) {
+                // Asynchronous mode - return task ID
+                const taskId = await transcribeAudio({
+                  filepath: audioArgs.filepath,
+                  language: audioArgs.language,
+                  config: {
+                    modelSize: audioArgs.modelSize,
+                    device: audioArgs.device,
+                  },
+                  uvPath: audioArgs.uvPath || process.env.UV_PATH,
+                });
+                
+                return {
+                  content: [
+                    { type: "text", text: `Enhanced audio transcription started` },
+                    { type: "text", text: `Task ID: ${taskId}` },
+                    { type: "text", text: `Use audio-transcription-status tool to check progress` },
+                  ],
+                  isError: false,
+                };
+              } else {
+                // Synchronous mode - wait for completion
+                const { EnhancedAudioTranscription } = await import("./audio/EnhancedAudioTranscription.js");
+                const transcription = new EnhancedAudioTranscription({
+                  modelSize: audioArgs.modelSize,
+                  device: audioArgs.device,
+                });
+                
+                const transcriptionResult = await transcription.transcribe({
+                  filepath: audioArgs.filepath,
+                  language: audioArgs.language,
+                  uvPath: audioArgs.uvPath || process.env.UV_PATH,
+                });
+                
+                // Save result to markdown file
+                const markdownContent = `# Audio Transcription
+
+**File:** ${audioArgs.filepath}
+**Language:** ${transcriptionResult.language || 'auto-detected'}
+**Duration:** ${transcriptionResult.duration ? `${transcriptionResult.duration.toFixed(1)}s` : 'unknown'}
+
+## Transcript
+
+${transcriptionResult.text}
+`;
+                
+                const outputPath = await saveToTempFile(markdownContent);
+                
+                result = {
+                  path: outputPath,
+                  text: markdownContent
+                };
+              }
+            }
+            break;
+
+          case tools.AudioTranscriptionStatusTool.name:
+            {
+              const statusArgs = TaskStatusRequestSchema.parse(args);
+              const task = getTaskStatus(statusArgs.taskId);
+              
+              if (!task) {
+                return {
+                  content: [{ type: "text", text: `Task not found: ${statusArgs.taskId}` }],
+                  isError: true,
+                };
+              }
+              
+              let statusText = `**Task ID:** ${task.id}
+**Status:** ${task.status}
+**Progress:** ${task.progress}%
+**File:** ${task.filePath}
+**Language:** ${task.language}
+**Created:** ${task.createdAt.toISOString()}`;
+
+              if (task.completedAt) {
+                statusText += `\n**Completed:** ${task.completedAt.toISOString()}`;
+              }
+              
+              if (task.error) {
+                statusText += `\n**Error:** ${task.error}`;
+              }
+              
+              if (task.result && task.status === 'completed') {
+                const markdownContent = `# Audio Transcription Result
+
+${statusText}
+
+## Transcript
+
+${task.result}
+`;
+                
+                const outputPath = await saveToTempFile(markdownContent);
+                
+                return {
+                  content: [
+                    { type: "text", text: `Output file: ${outputPath}` },
+                    { type: "text", text: `Task completed successfully` },
+                    { type: "text", text: markdownContent },
+                  ],
+                  isError: false,
+                };
+              }
+              
+              return {
+                content: [
+                  { type: "text", text: statusText },
+                ],
+                isError: task.status === 'failed',
+              };
+            }
             break;
 
           case tools.GetMarkdownFileTool.name:

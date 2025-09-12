@@ -174,6 +174,58 @@ export const PptxToMarkdownTool = ToolSchema.parse({
   },
 });
 
+export const EnhancedAudioToMarkdownTool = ToolSchema.parse({
+  name: "enhanced-audio-to-markdown",
+  description: "Convert an audio file to markdown with GPU-optimized transcription, RTX 3060 support, and advanced error handling",
+  inputSchema: {
+    type: "object",
+    properties: {
+      filepath: {
+        type: "string",
+        description: "Absolute path of the audio file to convert",
+      },
+      language: {
+        type: "string",
+        description: "Language code for transcription (e.g., 'en', 'es', 'fr'). Defaults to 'en'",
+      },
+      modelSize: {
+        type: "string",
+        enum: ["tiny", "base", "small", "medium", "large", "large-v2", "large-v3"],
+        description: "Whisper model size. Auto-selected based on GPU capability if not specified",
+      },
+      device: {
+        type: "string",
+        enum: ["auto", "cpu", "cuda", "cuda:0"],
+        description: "Device to use for transcription. 'auto' detects optimal device",
+      },
+      asyncMode: {
+        type: "boolean",
+        description: "Process asynchronously and return task ID for status checking",
+      },
+      uvPath: {
+        type: "string",
+        description: "Path to the uv executable (optional, defaults to 'uv')",
+      },
+    },
+    required: ["filepath"],
+  },
+});
+
+export const AudioTranscriptionStatusTool = ToolSchema.parse({
+  name: "audio-transcription-status",
+  description: "Check the status of an asynchronous audio transcription task",
+  inputSchema: {
+    type: "object",
+    properties: {
+      taskId: {
+        type: "string",
+        description: "Task ID returned from enhanced-audio-to-markdown in async mode",
+      },
+    },
+    required: ["taskId"],
+  },
+});
+
 export const GetMarkdownFileTool = ToolSchema.parse({
   name: "get-markdown-file",
   description: "Get a markdown file by absolute file path",
