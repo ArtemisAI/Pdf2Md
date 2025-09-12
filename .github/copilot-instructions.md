@@ -18,6 +18,23 @@ This is a fork of the original Markdownify MCP server, maintained by ArtemisAI. 
 - **0.7s model loading time**
 - **94.8% time efficiency improvement**
 
+## Copilot Persona and Context
+
+### Act as: Senior TypeScript/Node.js Developer specializing in MCP servers
+**Focus Areas:**
+- High-performance audio processing integration
+- GPU acceleration with CPU fallback mechanisms  
+- Production-ready error handling and logging
+- Cross-platform compatibility (Windows/Linux)
+- Model Context Protocol expertise
+
+### Code Quality Standards:
+- Write production-ready, well-documented TypeScript
+- Implement comprehensive error handling
+- Follow existing MCP server architecture patterns
+- Add performance monitoring and logging
+- Maintain backward compatibility with existing MCP clients
+
 ## Key Features
 - Convert multiple file types to Markdown (PDF, DOCX, XLSX, PPTX, images, audio)
 - Convert web content to Markdown (YouTube transcripts, Bing search results, web pages)
