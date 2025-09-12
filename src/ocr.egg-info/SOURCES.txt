@@ -1,0 +1,8 @@
+LICENSE
+README.md
+pyproject.toml
+src/ocr.egg-info/PKG-INFO
+src/ocr.egg-info/SOURCES.txt
+src/ocr.egg-info/dependency_links.txt
+src/ocr.egg-info/requires.txt
+src/ocr.egg-info/top_level.txt

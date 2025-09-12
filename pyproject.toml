@@ -7,6 +7,10 @@ requires-python = ">=3.11"
 dependencies = [
     "markitdown>=0.0.1a3",
     "openai-whisper",
-    "torch",
-    "torchaudio",
+    "torch>=2.1.0",
+    "torchaudio>=2.1.0",
+    "transformers>=4.36.0",
+    "faster-whisper>=0.10.0",
+    "datasets",
+    "accelerate",
 ]
