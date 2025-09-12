@@ -100,7 +100,7 @@ export const ImageToMarkdownTool = ToolSchema.parse({
 export const AudioToMarkdownTool = ToolSchema.parse({
   name: "audio-to-markdown",
   description:
-    "Convert an audio file to markdown, including transcription if possible",
+    "Convert an audio file to markdown with GPU-accelerated transcription if available, including automatic fallback to CPU processing",
   inputSchema: {
     type: "object",
     properties: {
