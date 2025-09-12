@@ -4,3 +4,4 @@ dist
 *.pdf
 test_*.js
 performance_verification.js
+demo_gpu_acceleration.js
