@@ -84,9 +84,47 @@ export function createServer() {
             });
             break;
 
+          case tools.AudioToMarkdownTool.name:
+            if (!validatedArgs.filepath) {
+              throw new Error("File path is required for this tool");
+            }
+            
+            // Use GPU-accelerated transcription for audio files with graceful fallback
+            try {
+              console.log('Using GPU-accelerated audio transcription...');
+              const { EnhancedAudioTranscription } = await import('./audio/index.js');
+              const enhancedTranscriber = new EnhancedAudioTranscription();
+              
+              const transcriptionResult = await enhancedTranscriber.transcribe({
+                filepath: validatedArgs.filepath,
+                uvPath: validatedArgs.uvPath || process.env.UV_PATH,
+              });
+              
+              // Convert to Markdownify format
+              const markdownContent = `# Audio Transcription\n\n**File:** ${validatedArgs.filepath}\n**Duration:** ${transcriptionResult.duration ? Math.round(transcriptionResult.duration) + 's' : 'unknown'}\n**Language:** ${transcriptionResult.language || 'auto-detected'}\n\n## Transcription\n\n${transcriptionResult.text}`;
+              
+              const outputPath = await saveToTempFile(markdownContent);
+              
+              result = {
+                path: outputPath,
+                text: markdownContent,
+              };
+              
+              console.log('GPU-accelerated transcription completed successfully');
+            } catch (error) {
+              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+              console.warn('GPU transcription failed, falling back to markitdown:', errorMessage);
+              // Fallback to standard markitdown processing
+              result = await Markdownify.toMarkdown({
+                filePath: validatedArgs.filepath,
+                projectRoot: validatedArgs.projectRoot,
+                uvPath: validatedArgs.uvPath || process.env.UV_PATH,
+              });
+            }
+            break;
+
           case tools.PDFToMarkdownTool.name:
           case tools.ImageToMarkdownTool.name:
-          case tools.AudioToMarkdownTool.name:
           case tools.DocxToMarkdownTool.name:
           case tools.XlsxToMarkdownTool.name:
           case tools.PptxToMarkdownTool.name:
