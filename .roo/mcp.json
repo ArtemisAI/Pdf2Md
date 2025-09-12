@@ -21,6 +21,13 @@
         "youtube-to-markdown"
       ],
       "timeout": 300
+    },
+    "huggingface": {
+      "type": "http",
+      "protocol": "https",
+      "host": "hf.co",
+      "path": "/mcp",
+      "timeout": 300
     }
   }
 }

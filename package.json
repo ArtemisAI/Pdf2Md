@@ -27,7 +27,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@types/node": "^22.9.3",
+    "@types/node": "^22.18.1",
     "@types/private-ip": "^1.0.3",
     "bun": "^1.1.41",
     "shx": "^0.3.4",

@@ -165,10 +165,6 @@ export const PptxToMarkdownTool = ToolSchema.parse({
         type: "string",
         description: "Absolute path of the PPTX file to convert",
       },
-      uvPath: {
-        type: "string",
-        description: "Path to the uv executable (optional, defaults to 'uv')",
-      },
     },
     required: ["filepath"],
   },

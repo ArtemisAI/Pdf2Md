@@ -1,4 +1,4 @@
-   {
+{
   "servers": {
     "Pdf2Md": {
       "command": "npx",
@@ -8,7 +8,12 @@
         "G:/projects/_Tools/_MCP/Pdf2Md/src/index.ts"
       ],
       "type": "stdio"
+    },
+    "huggingface": {
+      "url": "https://hf.co/mcp",
+      "type": "http"
     }
   },
   "inputs": []
 }
+    

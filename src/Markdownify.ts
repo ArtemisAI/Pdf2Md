@@ -25,6 +25,7 @@ export class Markdownify {
     // Expand tilde in uvPath if present
     const expandedUvPath = expandHome(uvPath);
 
+    console.log(`Executing: ${expandedUvPath} run markitdown ${filePath}`);
     // Use uv to run markitdown from installed packages
     const { stdout, stderr } = await execFileAsync(expandedUvPath, [
       "run",
@@ -72,6 +73,7 @@ export class Markdownify {
     projectRoot?: string;
     uvPath?: string;
   }): Promise<MarkdownResult> {
+    console.log(`toMarkdown called with: filePath=${filePath}, url=${url}`);
     try {
       let inputPath: string;
       let isTemporary = false;
@@ -91,7 +93,7 @@ export class Markdownify {
         inputPath = await this.saveToTempFile(content, extension);
         isTemporary = true;
       } else if (filePath) {
-        inputPath = filePath;
+        inputPath = this.normalizePath(filePath);
       } else {
         throw new Error("Either filePath or url must be provided");
       }
