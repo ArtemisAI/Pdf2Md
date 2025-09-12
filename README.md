@@ -1,5 +1,7 @@
 # Markdownify MCP Server
 
+**Repository:** https://github.com/ArtemisAI/Pdf2Md
+
 > Help! I need someone with a Windows computer to help me add support for Markdownify-MCP on Windows. PRs exist but I cannot test them. Post [here](https://github.com/zcaceres/markdownify-mcp/issues/18) if interested.
 
 ![markdownify mcp logo](logo.jpg)
@@ -7,6 +9,15 @@
 Markdownify is a Model Context Protocol (MCP) server that converts various file types and web content to Markdown format. It provides a set of tools to transform PDFs, images, audio files, web pages, and more into easily readable and shareable Markdown text.
 
 <a href="https://glama.ai/mcp/servers/bn5q4b0ett"><img width="380" height="200" src="https://glama.ai/mcp/servers/bn5q4b0ett/badge" alt="Markdownify Server MCP server" /></a>
+
+## Repository
+
+This is the ArtemisAI fork of the Markdownify MCP Server.
+
+- **Original Repository:** https://github.com/zcaceres/markdownify-mcp
+- **ArtemisAI Fork:** https://github.com/ArtemisAI/Pdf2Md
+
+This fork focuses on Windows compatibility and includes additional testing and documentation.
 
 ## Features
 
