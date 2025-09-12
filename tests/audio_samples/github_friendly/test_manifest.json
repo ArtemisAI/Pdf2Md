@@ -1,0 +1,25 @@
+{
+  "created": "2025-09-12 16:45:00",
+  "description": "Single optimized audio test file for GitHub Copilot environment",
+  "github_friendly": {
+    "total_files": 1,
+    "total_size_bytes": 21742,
+    "test_files": [
+      {
+        "filename": "test_002_duration_21kb.mp3",
+        "original_name": "cv-corpus-22.0-delta-2025-06-20/en/clips/common_voice_en_42896440.mp3",
+        "size_bytes": 21742,
+        "format": "MP3",
+        "purpose": "Primary test file for audio transcription validation",
+        "gpu_tested": true,
+        "cpu_tested": true
+      }
+    ]
+  },
+  "usage_notes": {
+    "recommended_for": "GitHub Copilot integration testing",
+    "file_size": "Small (21KB) - no LFS required",
+    "git_tracking": "Regular Git (not LFS)",
+    "performance_tested": "RTX 3060 GPU + CPU fallback verified"
+  }
+}
