@@ -1,0 +1,215 @@
+{
+  "folders": [
+    {
+      "name": "Pdf2Md - GPU Audio Enhancement", 
+      "path": "."
+    }
+  ],
+  "settings": {
+    // GitHub Copilot Configuration
+    "github.copilot.enable": {
+      "*": true,
+      "yaml": true,
+      "plaintext": true,
+      "markdown": true,
+      "typescript": true,
+      "javascript": true,
+      "python": true
+    },
+    "github.copilot.chat.enable": true,
+    "github.copilot.chat.welcomeMessage": "always",
+    "github.copilot.preferredAccount": "",
+    "github.copilot.advanced": {
+      "debug.overrideEngine": "",
+      "debug.testOverrideProxyUrl": "",
+      "debug.overrideProxyUrl": ""
+    },
+    
+    // Copilot Chat Participants
+    "github.copilot.chat.localeOverride": "",
+    "github.copilot.chat.useProjectTemplates": true,
+    "github.copilot.editor.enableAutoCompletions": true,
+    
+    // MCP Server Settings
+    "mcp.servers": {
+      "pdf2md": {
+        "command": "node",
+        "args": ["./dist/server.js"],
+        "env": {
+          "CUDA_VISIBLE_DEVICES": "0",
+          "KMP_DUPLICATE_LIB_OK": "TRUE",
+          "OMP_NUM_THREADS": "4",
+          "GPU_MEMORY_GB": "12",
+          "GPU_NAME": "RTX 3060",
+          "WHISPER_DEFAULT_LANGUAGE": "en"
+        }
+      }
+    },
+    
+    // TypeScript Configuration
+    "typescript.preferences.useAliasesForRenames": false,
+    "typescript.updateImportsOnFileMove.enabled": "always",
+    "typescript.suggest.autoImports": true,
+    "typescript.suggest.includeCompletionsForModuleExports": true,
+    
+    // Python Configuration for Audio Processing
+    "python.defaultInterpreterPath": "./.venv/Scripts/python.exe",
+    "python.terminal.activateEnvironment": true,
+    "python.analysis.typeCheckingMode": "basic",
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": false,
+    "python.linting.flake8Enabled": true,
+    
+    // Audio Enhancement Project Specific
+    "files.associations": {
+      "*.py": "python",
+      "*.ts": "typescript", 
+      "*.js": "javascript",
+      "*.mp3": "audio",
+      "*.wav": "audio",
+      "*.flac": "audio"
+    },
+    
+    // File Watching for Audio Development
+    "files.watcherExclude": {
+      "**/.git/objects/**": true,
+      "**/.git/subtree-cache/**": true,
+      "**/node_modules/*/**": true,
+      "**/.venv/**": true,
+      "**/tests/Audio_Test_Files/**": true,
+      "**/_archive/**": true,
+      "**/tmp/**": true
+    },
+    
+    // Search Configuration
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/.venv": true,
+      "**/tests/Audio_Test_Files": true,
+      "**/_archive": true,
+      "**/tmp": true
+    },
+    
+    // Terminal Configuration
+    "terminal.integrated.env.windows": {
+      "CUDA_VISIBLE_DEVICES": "0",
+      "KMP_DUPLICATE_LIB_OK": "TRUE", 
+      "OMP_NUM_THREADS": "4",
+      "GPU_MEMORY_GB": "12"
+    },
+    
+    // Git Configuration
+    "git.ignoreLimitWarning": true,
+    "git.autofetch": true,
+    "git.confirmSync": false,
+    
+    // Workspace Specific
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
+      "source.organizeImports": "explicit"
+    },
+    
+    // AI/ML Development 
+    "jupyter.askForKernelRestart": false,
+    "python.analysis.autoImportCompletions": true
+  },
+  
+  "extensions": {
+    "recommendations": [
+      "github.copilot",
+      "github.copilot-chat",
+      "github.vscode-pull-request-github", 
+      "ms-azuretools.vscode-azure-mcp-server",
+      "ms-python.python",
+      "ms-python.vscode-pylance"
+    ]
+  },
+  
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Build MCP Server",
+        "type": "shell",
+        "command": "npm",
+        "args": ["run", "build"],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "problemMatcher": ["$tsc"]
+      },
+      {
+        "label": "Test GPU Acceleration",
+        "type": "shell", 
+        "command": "python",
+        "args": ["tests/gpu_acceleration/test_gpu_final.py"],
+        "group": "test",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": true,
+          "panel": "shared"
+        },
+        "env": {
+          "CUDA_VISIBLE_DEVICES": "0",
+          "KMP_DUPLICATE_LIB_OK": "TRUE",
+          "OMP_NUM_THREADS": "4"
+        }
+      },
+      {
+        "label": "Run MCP Server",
+        "type": "shell",
+        "command": "node", 
+        "args": ["dist/server.js"],
+        "group": "build",
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "shared"
+        },
+        "dependsOn": "Build MCP Server"
+      }
+    ]
+  },
+  
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Debug MCP Server",
+        "type": "node",
+        "request": "launch", 
+        "program": "${workspaceFolder}/dist/server.js",
+        "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+        "env": {
+          "NODE_ENV": "development",
+          "CUDA_VISIBLE_DEVICES": "0",
+          "KMP_DUPLICATE_LIB_OK": "TRUE"
+        },
+        "preLaunchTask": "Build MCP Server"
+      },
+      {
+        "name": "Test Enhanced Audio",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceFolder}/tests/gpu_acceleration/test_gpu_final.py",
+        "env": {
+          "CUDA_VISIBLE_DEVICES": "0", 
+          "KMP_DUPLICATE_LIB_OK": "TRUE",
+          "OMP_NUM_THREADS": "4"
+        },
+        "console": "integratedTerminal"
+      }
+    ]
+  }
+}
