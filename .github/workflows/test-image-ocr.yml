@@ -1,0 +1,58 @@
+name: Test Image-to-Markdown OCR
+
+on:
+  push:
+    branches: [ copilot/fix-dc6c96dd-bf77-4c73-8af7-356defe9f2e4 ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-ocr:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y tesseract-ocr tesseract-ocr-eng
+        sudo apt-get install -y libtesseract-dev libleptonica-dev
+        
+    - name: Verify Tesseract installation
+      run: |
+        tesseract --version
+        tesseract --list-langs
+        
+    - name: Install UV
+      run: |
+        pip install uv
+        
+    - name: Install dependencies
+      run: |
+        npm install
+        uv add pytesseract opencv-python Pillow
+        
+    - name: Build project
+      run: npm run build
+      
+    - name: Run OCR dependency tests
+      run: uv run python debug_ocr.py
+      
+    - name: Run integration tests
+      run: |
+        node tests/test_image_ocr_integration.js
+        node tests/test_mcp_image_e2e.js
+        
+    - name: Test MCP server directly
+      run: |
+        timeout 10s node dist/index.js &
+        SERVER_PID=$!
+        sleep 3
+        echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}' | timeout 5s node dist/index.js || true
+        kill $SERVER_PID 2>/dev/null || true
