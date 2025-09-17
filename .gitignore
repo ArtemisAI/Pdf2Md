@@ -22,6 +22,17 @@ venv/
 *.aac
 *.ogg
 *.wma
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+*.opus
+*.amr
+*.3gp
+*.m4v
+*.mts
+*.vob
 
 # Allow small test audio files
 !tests/audio_samples/github_friendly/*.mp3
@@ -35,6 +46,14 @@ tests/Audio_Test_Files/samples/
 
 # Archive folder for temporary files and tests
 _archive/
+
+# Large test audio files (DO NOT COMMIT)
+tests/Audio_Long/
+tests/Audio_Test_Files/
+tests/large_audio/
+tests/*_Long/
+*.large
+*.big
 
 # Test outputs and temporary files
 test_*.py
