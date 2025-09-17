@@ -1,102 +1,443 @@
 # Change Request: Convert MCP Server to HTTP-Streamable Architecture
 
-## Executive Summary
+## Hi GitHub Copilot! 👋
 
-Convert the current stdio-based Model Context Protocol (MCP) server to an HTTP-streamable architecture using **Fast MCP Protocol (Streamable HTTP Transport, spec version 2025-03-26)** that enables always-available access for other agents and systems. This transformation will modernize the server architecture while maintaining all existing functionality and enhancing accessibility, scalability, and integration capabilities through Docker containerization.
+Please see below our current situation and implementation requirements for converting our MCP server from stdio-based to HTTP-streamable architecture.
 
-## Current State Analysis & Investigation
+---
 
-### Current Architecture Deep Dive
-- **Transport Protocol**: `StdioServerTransport` from `@modelcontextprotocol/sdk/server/stdio.js`
-- **Entry Point**: `src/index.ts` using `createServer()` and `StdioServerTransport()`
-- **Server Implementation**: `src/server.ts` with comprehensive tool handlers
-- **Deployment Model**: Local process execution via command line (`node dist/index.js`)
-- **Access Pattern**: Direct process spawning for each client session via stdio pipes
-- **Communication**: Synchronous stdio pipes between client and server (JSON-RPC over stdin/stdout)
-- **Availability**: On-demand execution only, no persistent service
+## 📋 **CURRENT SITUATION - What We Have**
 
-### Fast MCP Protocol Investigation
+### **Existing MCP Server Architecture**
+We currently have a **fully functional stdio-based MCP server** with the following specifications:
 
-#### Streamable HTTP Transport Specification (2025-03-26)
-Based on investigation of `@modelcontextprotocol/sdk`, the Fast MCP protocol uses:
+**✅ Current Implementation:**
+- **Transport**: `StdioServerTransport` from `@modelcontextprotocol/sdk/server/stdio.js`
+- **Entry Point**: `src/index.ts` using stdio pipes for client communication
+- **Server Core**: `src/server.ts` with 11 production-ready tools
+- **Deployment**: Local process execution only (`node dist/index.js`)
+- **Communication**: JSON-RPC over stdin/stdout pipes
+- **Availability**: On-demand execution per client session
 
-**Transport Class**: `StreamableHTTPServerTransport` from `@modelcontextprotocol/sdk/server/streamableHttp.js`
+**✅ Proven Capabilities:**
+- **File Conversion**: PDF, DOCX, XLSX, PPTX, images → Markdown
+- **Web Content**: YouTube transcripts, Bing search, webpage conversion
+- **Audio Transcription**: GPU-accelerated (RTX 3060) with **19.4x real-time speed**
+- **Python Integration**: UV package manager for script execution
+- **Error Handling**: Robust GPU→CPU fallback mechanisms
+- **Performance**: Validated and benchmarked across 15 test files
 
-**Key Features Discovered**:
-- **HTTP Methods**: GET (SSE streams), POST (JSON-RPC requests), DELETE (session termination)
-- **Session Management**: Cryptographically secure session IDs with `Mcp-Session-Id` header
-- **Dual Response Modes**: 
-  - SSE streaming (`text/event-stream`) for real-time responses
-  - Direct JSON responses (`application/json`) for immediate results
-- **Resumability**: Event storage with `Last-Event-ID` header support
-- **Authentication**: OAuth 2.0 Bearer token support with resource metadata
-- **Protocol Negotiation**: `Mcp-Protocol-Version` header (supports 2024-11-05, 2025-03-26)
+**✅ Technical Stack:**
+- **Runtime**: Node.js + TypeScript (ES modules)
+- **MCP SDK**: `@modelcontextprotocol/sdk` v1.0.1 (**✅ Supports StreamableHTTPServerTransport**)
+- **GPU Support**: CUDA 12.1, PyTorch 2.5.1+cu121, faster-whisper
+- **Build System**: TypeScript compiler with proper executable permissions
 
-#### Implementation Architecture
-```typescript
-// Current (stdio-based)
-const transport = new StdioServerTransport();
+---
 
-// Target (HTTP-streamable)  
-const transport = new StreamableHTTPServerTransport({
-  sessionIdGenerator: () => randomUUID(),
-  enableJsonResponse: true,
-  eventStore: new RedisEventStore(),
-  onsessioninitialized: (sessionId) => {
-    console.log(`Session ${sessionId} initialized`);
-  },
-  onsessionclosed: (sessionId) => {
-    console.log(`Session ${sessionId} closed`);
-  }
-});
+## 🎯 **REQUIREMENTS - What We Need**
+
+### **Target Architecture: HTTP-Streamable MCP Server**
+
+**🔄 Transform From:** Stdio-based local process  
+**🔄 Transform To:** Always-available HTTP service with Docker containerization
+
+**📋 Core Requirements:**
+
+#### **1. Always-Available Service**
+- **Persistent Server**: Background daemon via Docker containers
+- **High Availability**: 99.9% uptime with automatic restart
+- **Load Balancing**: Horizontal scaling support
+- **Health Monitoring**: Container orchestration with auto-recovery
+
+#### **2. HTTP-Based Communication** 
+- **Fast MCP Protocol**: Streamable HTTP Transport (spec 2025-03-26)
+- **RESTful API**: Standard HTTP methods (GET, POST, DELETE)
+- **Server-Sent Events**: Real-time streaming for long operations
+- **Dual Response Modes**: SSE streaming + direct JSON responses
+
+#### **3. Session Management**
+- **Stateful Sessions**: Context persistence across requests
+- **Redis Backend**: Docker volume-mounted for session storage
+- **Concurrent Sessions**: Support 100+ simultaneous connections
+- **Session Cleanup**: Graceful termination and resource management
+
+#### **4. Streaming & Resumability**
+- **Real-time Progress**: Live updates via SSE for audio transcription
+- **Partial Results**: Incremental delivery of processing results
+- **Resumability**: Continue interrupted operations from checkpoints
+- **Event Store**: Redis-based event persistence with `Last-Event-ID` support
+
+---
+
+## 🚀 **IMPLEMENTATION OBJECTIVES - What You Should Accomplish**
+
+### **Phase 1: HTTP Transport Migration (Weeks 1-2)**
+
+**🎯 Primary Objective**: Replace `StdioServerTransport` with `StreamableHTTPServerTransport`
+
+**What You Must Do:**
+1. **Update `src/index.ts`**:
+   ```typescript
+   // Replace stdio transport
+   const transport = new StreamableHTTPServerTransport({
+     sessionIdGenerator: () => randomUUID(),
+     enableJsonResponse: true,
+     eventStore: new RedisEventStore(),
+     onsessioninitialized: (sessionId) => log(`Session ${sessionId} started`),
+     onsessionclosed: (sessionId) => log(`Session ${sessionId} ended`)
+   });
+   ```
+
+2. **Create Express.js HTTP Server**:
+   ```typescript
+   const app = express();
+   app.use('/mcp', mcpHttpHandler(transport));
+   app.listen(3000, () => console.log('MCP HTTP Server ready'));
+   ```
+
+3. **Implement Redis Session Store**:
+   ```typescript
+   class RedisEventStore implements EventStore {
+     async store(sessionId: string, event: any): Promise<void>
+     async retrieve(sessionId: string, fromEventId?: string): Promise<any[]>
+     async cleanup(sessionId: string): Promise<void>
+   }
+   ```
+
+**Deliverables:**
+- [ ] Updated `src/index.ts` with HTTP transport
+- [ ] New `src/http-server.ts` with Express.js integration
+- [ ] New `src/redis-store.ts` with session management
+- [ ] Updated `package.json` with HTTP dependencies
+
+### **Phase 2: Streaming Enhancement (Weeks 3-4)**
+
+**🎯 Primary Objective**: Implement real-time progress streaming for audio transcription
+
+**What You Must Do:**
+1. **Enhance Audio Tool with SSE Streaming**:
+   ```typescript
+   async function streamAudioTranscription(sessionId: string, filePath: string) {
+     const progressStream = createProgressStream(sessionId);
+     
+     // Stream real-time progress
+     progressStream.send('progress', { stage: 'loading', percent: 10 });
+     progressStream.send('progress', { stage: 'processing', percent: 50 });
+     progressStream.send('result', { transcript: finalResult });
+   }
+   ```
+
+2. **Implement Event Store with Redis**:
+   ```typescript
+   // Store events for resumability
+   await eventStore.store(sessionId, {
+     id: eventId,
+     type: 'progress',
+     data: { stage: 'processing', percent: 75 }
+   });
+   ```
+
+3. **Add Resumability Support**:
+   ```typescript
+   // Handle Last-Event-ID for resume functionality
+   const lastEventId = req.headers['last-event-id'];
+   const events = await eventStore.retrieve(sessionId, lastEventId);
+   ```
+
+**Deliverables:**
+- [ ] Enhanced `src/tools.ts` with streaming progress
+- [ ] New `src/progress-stream.ts` for SSE management
+- [ ] Updated Redis store with event persistence
+- [ ] Resume capability for interrupted operations
+
+### **Phase 3: Docker Containerization (Weeks 5-6)**
+
+**🎯 Primary Objective**: Create production-ready Docker deployment
+
+**What You Must Do:**
+1. **Multi-Stage Dockerfile with GPU Support**:
+   ```dockerfile
+   FROM nvidia/cuda:12.3.2-cudnn9-runtime-ubuntu22.04
+   # Install Node.js, Python UV, GPU libraries
+   # Copy and build TypeScript application
+   # Configure health checks and monitoring
+   ```
+
+2. **Docker Compose with Redis**:
+   ```yaml
+   services:
+     mcp-server:
+       build: .
+       ports: ["3000:3000"]
+       environment: [CUDA_VISIBLE_DEVICES=0]
+       depends_on: [redis]
+     
+     redis:
+       image: redis:alpine
+       volumes: [redis-data:/data]
+   ```
+
+3. **Health Monitoring & Metrics**:
+   ```typescript
+   app.get('/health', (req, res) => {
+     res.json({
+       status: 'healthy',
+       gpu: await checkGPUStatus(),
+       redis: await checkRedisConnection(),
+       uptime: process.uptime()
+     });
+   });
+   ```
+
+**Deliverables:**
+- [ ] Production `Dockerfile` with GPU support
+- [ ] Complete `docker-compose.yml` configuration
+- [ ] Health check endpoints and monitoring
+- [ ] Environment variable configuration
+
+### **Phase 4: Security & Production Deployment (Weeks 7-8)**
+
+**🎯 Primary Objective**: Production-ready security and deployment
+
+**What You Must Do:**
+1. **OAuth 2.0 Authentication**:
+   ```typescript
+   app.use('/mcp', authenticateToken, rateLimiter, mcpHttpHandler);
+   
+   function authenticateToken(req, res, next) {
+     const token = req.headers.authorization?.split(' ')[1];
+     // Validate JWT token and set user context
+   }
+   ```
+
+2. **Rate Limiting & Monitoring**:
+   ```typescript
+   const rateLimiter = rateLimit({
+     windowMs: 15 * 60 * 1000, // 15 minutes
+     max: 100, // requests per window
+     keyGenerator: (req) => req.user.id
+   });
+   ```
+
+3. **Kubernetes Deployment**:
+   ```yaml
+   apiVersion: apps/v1
+   kind: Deployment
+   spec:
+     replicas: 3
+     template:
+       spec:
+         containers:
+         - name: mcp-server
+           image: mcp-server:latest
+           resources:
+             limits: {nvidia.com/gpu: 1}
+   ```
+
+**Deliverables:**
+- [ ] OAuth 2.0 authentication implementation
+- [ ] Rate limiting and security middleware
+- [ ] Kubernetes deployment manifests
+- [ ] Production monitoring and logging
+
+---
+
+## 🧪 **TESTING REQUIREMENTS - What You Should Test**
+
+### **Phase 1 Testing: HTTP Transport Validation**
+```bash
+# Test HTTP endpoint availability
+curl -X POST http://localhost:3000/mcp \
+  -H "Content-Type: application/json" \
+  -H "Mcp-Session-Id: test-session-123" \
+  -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
+
+# Expected: JSON response with all 11 tools listed
 ```
 
-### Existing Capabilities Analysis
-- **File Conversion Tools**: PDF, DOCX, XLSX, PPTX, images to Markdown
-- **Web Content Processing**: YouTube transcripts, Bing search results, webpage conversion
-- **Audio Transcription**: GPU-accelerated (RTX 3060) audio-to-text with faster-whisper
-- **Performance**: 19.4x real-time audio processing speed
-- **Python Integration**: UV package manager for Python script execution
-- **Error Handling**: Comprehensive fallback mechanisms (GPU → CPU)
-- **Tool Count**: 11 tools including enhanced audio transcription with async support
+### **Phase 2 Testing: Streaming Functionality**
+```bash
+# Test SSE streaming for audio transcription
+curl -X GET http://localhost:3000/mcp/stream \
+  -H "Accept: text/event-stream" \
+  -H "Mcp-Session-Id: test-session-123"
 
-### Technical Stack Audit
-- **Runtime**: Node.js with TypeScript (ES modules)
-- **MCP SDK**: `@modelcontextprotocol/sdk` v1.0.1 ✅ **Supports StreamableHTTPServerTransport**
-- **Dependencies**: Zod validation, private-ip security
-- **Python Backend**: UV package manager for Python script execution
-- **GPU Acceleration**: CUDA 12.1, PyTorch 2.5.1+cu121, faster-whisper
-- **Build System**: TypeScript compiler with chmod for executable dist files
+# Expected: Real-time progress events via SSE
+# event: progress
+# data: {"stage":"loading","percent":10}
+```
 
-## Target Architecture: HTTP-Streamable MCP
+### **Phase 3 Testing: Docker Deployment**
+```bash
+# Test Docker container startup
+docker-compose up -d
+docker-compose ps  # All services should be "Up"
 
-### Core Requirements
+# Test GPU accessibility in container
+docker exec mcp-server python -c "import torch; print(torch.cuda.is_available())"
+# Expected: True (GPU available)
 
-#### 1. **Always-Available Service**
-- **Persistent Server Process**: Background daemon/service operation via Docker containers
-- **High Availability**: 99.9% uptime with automatic restart mechanisms via Docker Swarm/Kubernetes
-- **Load Balancing**: Support for horizontal scaling across multiple Docker container instances
-- **Health Monitoring**: Endpoint monitoring and automatic recovery through container orchestration
+# Test Redis connectivity
+docker exec mcp-server redis-cli ping
+# Expected: PONG
+```
 
-#### 2. **HTTP-Based Communication**
-- **Streamable HTTP Transport**: Implement MCP Streamable HTTP specification (2025-03-26)
-- **RESTful API**: Standard HTTP methods (GET, POST, DELETE) as per MCP spec
-- **Server-Sent Events (SSE)**: Real-time streaming for long-running operations
-- **JSON Response Mode**: Support for both streaming and direct JSON responses
+### **Phase 4 Testing: Production Readiness**
+```bash
+# Load testing
+artillery run load-test.yml  # 100 concurrent sessions
+# Expected: <500ms average response time, 0% error rate
 
-#### 3. **Session Management**
-- **Stateful Sessions**: Maintain context across multiple requests using Redis backend
-- **Session Persistence**: Docker volume-mounted Redis for session storage
-- **Concurrent Sessions**: Support multiple simultaneous client connections (100+ target)
-- **Session Termination**: Graceful cleanup and resource management
+# Security testing
+curl -X POST http://localhost:3000/mcp \
+  -H "Authorization: Bearer invalid-token"
+# Expected: 401 Unauthorized
 
-#### 4. **Streaming Capabilities**
-- **Real-time Progress**: Live updates for long-running transcriptions via SSE
-- **Partial Results**: Incremental delivery of processing results
-- **Resumability**: Continue interrupted operations from last checkpoint using event store
-- **Backpressure Handling**: Manage client-server flow control
+# Health monitoring
+curl http://localhost:3000/health
+# Expected: {"status":"healthy","gpu":true,"redis":"connected"}
+```
 
-### Docker Compose Architecture
+### **Integration Testing Requirements**
+- [ ] **Audio Transcription**: Maintain 19.4x real-time performance via HTTP
+- [ ] **File Conversion**: All 11 tools work identically to stdio version
+- [ ] **Session Persistence**: State maintained across HTTP requests
+- [ ] **Concurrent Sessions**: Support 100+ simultaneous connections
+- [ ] **Resumability**: Interrupted operations resume from last checkpoint
+- [ ] **Error Handling**: GPU→CPU fallback works via HTTP transport
+
+---
+
+## 📊 **EXPECTED RESULTS - Success Criteria**
+
+### **Performance Benchmarks**
+- **Audio Transcription**: Maintain ≥15x real-time speed (target: 19.4x achieved)
+- **HTTP Overhead**: <50ms additional latency vs stdio transport
+- **Concurrent Sessions**: Support 100+ simultaneous connections
+- **Memory Usage**: <4GB per container instance
+- **GPU Utilization**: >80% during transcription operations
+
+### **Availability Metrics**
+- **Uptime**: 99.9% availability (≤8.77 hours downtime/year)
+- **Response Time**: <500ms for tool execution requests
+- **Session Recovery**: <30 seconds after container restart
+- **Health Checks**: Pass every 10 seconds
+
+### **Functionality Validation**
+- **✅ Tool Compatibility**: All 11 existing tools work identically
+- **✅ GPU Acceleration**: Audio transcription maintains performance
+- **✅ Streaming Progress**: Real-time updates via SSE
+- **✅ Session Management**: Stateful context across requests
+- **✅ Resumability**: Continue interrupted operations
+- **✅ Error Handling**: Robust fallback mechanisms preserved
+
+### **Deployment Verification**
+- **✅ Docker Build**: Multi-stage build completes successfully
+- **✅ Container Startup**: Services start within 30 seconds
+- **✅ GPU Access**: CUDA available in container environment
+- **✅ Redis Connection**: Session store accessible and persistent
+- **✅ Health Monitoring**: All endpoints respond correctly
+
+### **Security Compliance**
+- **✅ Authentication**: OAuth 2.0 Bearer token validation
+- **✅ Rate Limiting**: Per-user request throttling active
+- **✅ SSL/TLS**: HTTPS-only in production deployment
+- **✅ Audit Logging**: All requests logged with user context
+- **✅ Resource Limits**: Container resource constraints enforced
+
+---
+
+## 🎯 **IMPLEMENTATION STRATEGY**
+
+### **Technical Approach**
+
+1. **Maintain Backward Compatibility**: All existing functionality preserved
+2. **Zero-Downtime Migration**: Parallel deployment during transition
+3. **Progressive Enhancement**: Add HTTP features without removing stdio
+4. **Performance Monitoring**: Continuous benchmarking during development
+5. **Security-First**: Authentication and rate limiting from day one
+
+### **Architecture Decision Records**
+
+**✅ Transport Protocol**: StreamableHTTPServerTransport (MCP spec 2025-03-26)  
+**✅ Session Backend**: Redis for persistence and scalability  
+**✅ Containerization**: Docker with NVIDIA GPU runtime support  
+**✅ Orchestration**: Kubernetes for production auto-scaling  
+**✅ Monitoring**: Prometheus + Grafana for observability  
+
+### **Risk Mitigation**
+
+- **Performance Regression**: Continuous benchmarking with automated alerts
+- **GPU Compatibility**: Fallback mechanisms and environment validation
+- **Session Loss**: Redis persistence with volume mounting
+- **Security Vulnerabilities**: Regular dependency audits and pen testing
+- **Deployment Failures**: Blue-green deployment with rollback capability
+
+---
+
+## 📋 **IMPLEMENTATION CHECKLIST**
+
+### **Pre-Implementation Setup**
+- [ ] Create feature branch: `HTTP-MCP-Implementation`
+- [ ] Set up development environment with Docker + GPU support
+- [ ] Install Redis locally for development and testing
+- [ ] Configure VS Code with MCP SDK TypeScript support
+
+### **Phase 1: HTTP Transport (Weeks 1-2)**
+- [ ] Replace `StdioServerTransport` with `StreamableHTTPServerTransport`
+- [ ] Create Express.js HTTP server integration
+- [ ] Implement Redis session store
+- [ ] Add health check endpoints
+- [ ] Update package.json dependencies
+- [ ] Write unit tests for HTTP transport layer
+
+### **Phase 2: Streaming (Weeks 3-4)**
+- [ ] Enhance audio transcription with progress streaming
+- [ ] Implement SSE event broadcasting
+- [ ] Add event store persistence with Redis
+- [ ] Create resumability support with Last-Event-ID
+- [ ] Add streaming integration tests
+- [ ] Validate real-time progress updates
+
+### **Phase 3: Containerization (Weeks 5-6)**
+- [ ] Create multi-stage Dockerfile with GPU support
+- [ ] Write docker-compose.yml with Redis configuration
+- [ ] Configure NVIDIA container runtime
+- [ ] Add health checks and monitoring endpoints
+- [ ] Create environment variable configuration
+- [ ] Test container deployment and GPU accessibility
+
+### **Phase 4: Production (Weeks 7-8)**
+- [ ] Implement OAuth 2.0 authentication middleware
+- [ ] Add rate limiting and security headers
+- [ ] Create Kubernetes deployment manifests
+- [ ] Set up Prometheus metrics collection
+- [ ] Configure Grafana monitoring dashboards
+- [ ] Perform load testing and security audits
+
+### **Final Validation**
+- [ ] **Performance**: Audio transcription maintains 19.4x speed
+- [ ] **Concurrency**: Support 100+ simultaneous sessions
+- [ ] **Reliability**: 99.9% uptime with auto-recovery
+- [ ] **Security**: OAuth 2.0 + rate limiting operational
+- [ ] **Monitoring**: Complete observability stack deployed
+
+---
+
+## 🚀 **READY FOR IMPLEMENTATION**
+
+**All technical research completed ✅**  
+**Architecture validated ✅**  
+**Implementation roadmap established ✅**  
+**Success criteria defined ✅**
+
+**👨‍💻 GitHub Copilot: Please begin implementation following this structured plan!**
+
+---
+
+*Last Updated: September 17, 2025*  
+*Document Version: 2.0 - Restructured for Clear Implementation*
 
 #### Core Services Configuration
 ```yaml
