@@ -29,6 +29,28 @@ This fork focuses on Windows compatibility and includes additional testing and d
   - XLSX
   - PPTX
 - Convert web content to Markdown:
+  - YouTube videos (with transcripts)
+  - Web pages
+  - Bing search results
+- Retrieve existing Markdown files
+- **🚀 NEW: GPU-accelerated audio transcription** (19.4x real-time speed on RTX 3060)
+- **🔄 IN PROGRESS: HTTP-streamable architecture** for always-available service
+
+## 📋 Change Request System
+
+This project uses a structured change request system for development planning and tracking:
+
+- **📁 Location**: `.github/change-requests/`
+- **📝 Template**: `.github/prompts/change-request.prompt.md`
+- **📊 Tracking**: `.github/change-requests/CHANGE_REQUEST_TRACKING.md`
+
+### Current Status
+- **Active**: [CHANGE_REQUEST_3_MCP_HTTP.md](.github/change-requests/CHANGE_REQUEST_3_MCP_HTTP.md) - Converting to HTTP-streamable architecture
+- **Completed**: GPU integration, initial setup
+- **Branch**: `HTTP-MCP`
+
+See [Change Request Tracking](.github/change-requests/CHANGE_REQUEST_TRACKING.md) for full details.
+- Convert web content to Markdown:
   - YouTube video transcripts
   - Bing search results
   - General web pages
