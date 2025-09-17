@@ -5,6 +5,7 @@ import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { createServer } from './server.js';
 import { RedisEventStore } from './redis-store.js';
 import { ProgressStreamManager } from './progress-stream.js';
+import { SecurityMiddleware, defaultSecurityConfig, rateLimitConfigs, AuthenticatedRequest } from './security.js';
 import { randomUUID } from 'node:crypto';
 
 export interface MCPHttpServerOptions {
@@ -12,12 +13,16 @@ export interface MCPHttpServerOptions {
   redisUrl?: string;
   enableCors?: boolean;
   enableSecurity?: boolean;
+  enableAuth?: boolean;
+  apiKeys?: string[];
 }
 
 export class MCPHttpServer {
   private app: express.Application;
   private eventStore: RedisEventStore;
   private progressManager: ProgressStreamManager;
+  private security: SecurityMiddleware;
+  private authMiddleware: any;
   private sessions: Map<string, SSEServerTransport> = new Map();
   private mcpServer = createServer();
 
@@ -26,12 +31,26 @@ export class MCPHttpServer {
     this.eventStore = new RedisEventStore(options.redisUrl);
     this.progressManager = ProgressStreamManager.getInstance();
     
+    // Initialize security with configuration
+    const securityConfig = {
+      ...defaultSecurityConfig,
+      enabled: options.enableAuth !== false,
+      apiKeys: options.apiKeys || process.env.API_KEYS?.split(',') || []
+    };
+    this.security = new SecurityMiddleware(securityConfig);
+    
     this.setupMiddleware(options);
     this.setupRoutes();
   }
 
   private setupMiddleware(options: MCPHttpServerOptions) {
-    // Security middleware
+    // Trust proxy for proper rate limiting and security headers
+    this.app.set('trust proxy', 1);
+
+    // Security headers
+    this.app.use(this.security.securityHeaders);
+
+    // Enhanced security middleware
     if (options.enableSecurity !== false) {
       this.app.use(helmet({
         contentSecurityPolicy: false, // Allow SSE
@@ -39,30 +58,27 @@ export class MCPHttpServer {
       }));
     }
 
-    // CORS middleware
+    // CORS middleware with security configuration
     if (options.enableCors !== false) {
-      this.app.use(cors({
-        origin: true, // Allow all origins for development
-        credentials: true,
-        methods: ['GET', 'POST', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'Last-Event-ID', 'Mcp-Session-Id']
-      }));
+      this.app.use(cors(this.security.getCorsOptions()));
     }
 
     // Body parsing
     this.app.use(express.json({ limit: '10mb' }));
     this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-    // Logging middleware
-    this.app.use((req, res, next) => {
-      console.log(`${new Date().toISOString()} ${req.method} ${req.path} - Session: ${req.headers['mcp-session-id'] || 'none'}`);
-      next();
-    });
+    // Request logging (always enabled)
+    this.app.use(this.security.requestLogger);
+    
+    // Authentication middleware (conditionally applied to routes)
+    this.authMiddleware = this.security.apiKeyAuth;
   }
 
   private setupRoutes() {
-    // Health check endpoint
-    this.app.get('/health', async (req, res) => {
+    // Health check endpoint (no authentication required, light rate limiting)
+    this.app.get('/health', 
+      this.security.createRateLimiter(rateLimitConfigs.health),
+      async (req, res) => {
       const redisHealth = await this.eventStore.isHealthy();
       const health = {
         status: 'healthy',
@@ -70,14 +86,20 @@ export class MCPHttpServer {
         uptime: process.uptime(),
         sessions: this.sessions.size,
         redis: redisHealth ? 'connected' : 'disconnected',
-        gpu: await this.checkGPUStatus()
+        gpu: await this.checkGPUStatus(),
+        authentication: this.security ? 'enabled' : 'disabled',
+        environment: process.env.NODE_ENV || 'development'
       };
 
       res.status(redisHealth ? 200 : 503).json(health);
     });
 
-    // SSE endpoint for establishing connection
-    this.app.get('/mcp/stream', async (req, res) => {
+    // SSE endpoint for establishing connection (streaming rate limit)
+    this.app.get('/mcp/stream', 
+      this.authMiddleware,
+      this.security.createRateLimiter(rateLimitConfigs.streaming),
+      this.security.requirePermission('read'),
+      async (req: AuthenticatedRequest, res) => {
       const sessionId = req.headers['mcp-session-id'] as string || randomUUID();
       
       try {
@@ -117,8 +139,12 @@ export class MCPHttpServer {
       }
     });
 
-    // Message endpoint for receiving POST requests
-    this.app.post('/mcp/message', async (req, res) => {
+    // Message endpoint for receiving POST requests (API rate limit)
+    this.app.post('/mcp/message', 
+      this.authMiddleware,
+      this.security.createRateLimiter(rateLimitConfigs.api),
+      this.security.requirePermission('write'),
+      async (req: AuthenticatedRequest, res) => {
       const sessionId = req.query.sessionId as string;
       
       if (!sessionId) {
@@ -148,7 +174,11 @@ export class MCPHttpServer {
     });
 
     // JSON-RPC endpoint for direct requests (compatibility)
-    this.app.post('/mcp', async (req, res) => {
+    this.app.post('/mcp', 
+      this.authMiddleware,
+      this.security.createRateLimiter(rateLimitConfigs.api),
+      this.security.requirePermission('read'),
+      async (req: AuthenticatedRequest, res) => {
       const sessionId = req.headers['mcp-session-id'] as string || randomUUID();
       
       try {
@@ -198,8 +228,12 @@ export class MCPHttpServer {
       res.json({ events });
     });
 
-    // Audio transcription progress streaming endpoint
-    this.app.get('/mcp/audio/progress/:taskId', async (req, res) => {
+    // Audio transcription progress streaming endpoint (streaming rate limit)
+    this.app.get('/mcp/audio/progress/:taskId', 
+      this.authMiddleware,
+      this.security.createRateLimiter(rateLimitConfigs.streaming),
+      this.security.requirePermission('read'),
+      async (req: AuthenticatedRequest, res) => {
       const { taskId } = req.params;
       const sessionId = req.headers['mcp-session-id'] as string || randomUUID();
 
@@ -238,8 +272,12 @@ export class MCPHttpServer {
       });
     });
 
-    // Audio transcription start endpoint with streaming
-    this.app.post('/mcp/audio/transcribe', async (req, res) => {
+    // Audio transcription start endpoint with streaming (audio rate limit)
+    this.app.post('/mcp/audio/transcribe', 
+      this.authMiddleware,
+      this.security.createRateLimiter(rateLimitConfigs.audio),
+      this.security.requirePermission('write'),
+      async (req: AuthenticatedRequest, res) => {
       const sessionId = req.headers['mcp-session-id'] as string || randomUUID();
       const { filePath, language = 'en', modelSize = 'tiny', device = 'auto' } = req.body;
 
@@ -275,8 +313,12 @@ export class MCPHttpServer {
       }
     });
 
-    // Audio transcription status endpoint
-    this.app.get('/mcp/audio/status/:taskId', async (req, res) => {
+    // Audio transcription status endpoint (API rate limit)
+    this.app.get('/mcp/audio/status/:taskId', 
+      this.authMiddleware,
+      this.security.createRateLimiter(rateLimitConfigs.api),
+      this.security.requirePermission('read'),
+      async (req: AuthenticatedRequest, res) => {
       const { taskId } = req.params;
       
       try {

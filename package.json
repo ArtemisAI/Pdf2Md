@@ -26,6 +26,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.0.1",
     "express": "^4.19.2",
+    "express-rate-limit": "^7.4.1",
     "redis": "^4.7.0",
     "cors": "^2.8.5",
     "helmet": "^8.0.0",
