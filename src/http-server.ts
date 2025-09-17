@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { createServer } from './server.js';
 import { RedisEventStore } from './redis-store.js';
+import { ProgressStreamManager } from './progress-stream.js';
 import { randomUUID } from 'node:crypto';
 
 export interface MCPHttpServerOptions {
@@ -16,12 +17,14 @@ export interface MCPHttpServerOptions {
 export class MCPHttpServer {
   private app: express.Application;
   private eventStore: RedisEventStore;
+  private progressManager: ProgressStreamManager;
   private sessions: Map<string, SSEServerTransport> = new Map();
   private mcpServer = createServer();
 
   constructor(options: MCPHttpServerOptions = {}) {
     this.app = express();
     this.eventStore = new RedisEventStore(options.redisUrl);
+    this.progressManager = ProgressStreamManager.getInstance();
     
     this.setupMiddleware(options);
     this.setupRoutes();
@@ -87,6 +90,7 @@ export class MCPHttpServer {
           console.log(`🔌 Session ${sessionId} closed`);
           this.sessions.delete(sessionId);
           this.eventStore.cleanup(sessionId);
+          this.progressManager.cleanup(sessionId);
         };
 
         transport.onerror = (error) => {
@@ -193,6 +197,100 @@ export class MCPHttpServer {
       const events = await this.eventStore.retrieve(sessionId, lastEventId);
       res.json({ events });
     });
+
+    // Audio transcription progress streaming endpoint
+    this.app.get('/mcp/audio/progress/:taskId', async (req, res) => {
+      const { taskId } = req.params;
+      const sessionId = req.headers['mcp-session-id'] as string || randomUUID();
+
+      // Set up SSE headers
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Last-Event-ID, Mcp-Session-Id'
+      });
+
+      console.log(`📡 Audio progress streaming started for task ${taskId}, session ${sessionId}`);
+
+      // Send initial connection event
+      res.write(`event: connected\ndata: ${JSON.stringify({ taskId, sessionId, timestamp: Date.now() })}\n\n`);
+
+      // Create progress stream and subscribe to updates
+      const progressStream = this.progressManager.createProgressStream(sessionId, taskId);
+
+      // Override the send method to also send via SSE
+      const originalSend = progressStream.send;
+      progressStream.send = async (type: string, data: any) => {
+        // Call original send (stores in Redis/memory)
+        await originalSend.call(progressStream, type, data);
+        
+        // Also send via SSE
+        const sseData = JSON.stringify({ type, data, timestamp: Date.now() });
+        res.write(`event: ${type}\ndata: ${sseData}\n\n`);
+      };
+
+      // Handle client disconnect
+      req.on('close', async () => {
+        console.log(`📡 Audio progress streaming closed for task ${taskId}`);
+        await progressStream.close();
+      });
+    });
+
+    // Audio transcription start endpoint with streaming
+    this.app.post('/mcp/audio/transcribe', async (req, res) => {
+      const sessionId = req.headers['mcp-session-id'] as string || randomUUID();
+      const { filePath, language = 'en', modelSize = 'tiny', device = 'auto' } = req.body;
+
+      if (!filePath) {
+        return res.status(400).json({ error: 'filePath is required' });
+      }
+
+      try {
+        const taskId = randomUUID();
+        
+        // Start streaming progress for this task
+        await this.progressManager.streamAudioTranscription(sessionId, taskId, filePath, {
+          language,
+          modelSize,
+          device
+        });
+
+        // Return task info with streaming endpoint
+        res.json({
+          taskId,
+          sessionId,
+          filePath,
+          streamingEndpoint: `/mcp/audio/progress/${taskId}`,
+          statusEndpoint: `/mcp/audio/status/${taskId}`,
+          message: 'Audio transcription started with real-time progress streaming'
+        });
+
+        console.log(`🎵 Audio transcription started: ${taskId} for file: ${filePath}`);
+
+      } catch (error) {
+        console.error('Failed to start audio transcription:', error);
+        res.status(500).json({ error: 'Failed to start transcription' });
+      }
+    });
+
+    // Audio transcription status endpoint
+    this.app.get('/mcp/audio/status/:taskId', async (req, res) => {
+      const { taskId } = req.params;
+      
+      try {
+        // Get status from audio system (this would integrate with existing getTaskStatus)
+        // For now, return basic info
+        res.json({
+          taskId,
+          status: 'processing',
+          message: 'Use the streaming endpoint for real-time updates'
+        });
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to get task status' });
+      }
+    });
   }
 
   private async storeEvent(sessionId: string, event: any) {
@@ -233,6 +331,11 @@ export class MCPHttpServer {
       await transport.close();
     }
     this.sessions.clear();
+
+    // Cleanup progress streams
+    for (const sessionId of this.sessions.keys()) {
+      await this.progressManager.cleanup(sessionId);
+    }
 
     // Disconnect from Redis
     await this.eventStore.disconnect();
