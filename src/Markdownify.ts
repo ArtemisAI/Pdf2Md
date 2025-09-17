@@ -22,6 +22,15 @@ export class Markdownify {
     projectRoot: string,
     uvPath: string,
   ): Promise<string> {
+    // Check if this is an audio file and handle with our custom transcription
+    const audioExtensions = ['.mp3', '.wav', '.flac', '.ogg', '.m4a', '.aac', '.mp4', '.webm'];
+    const fileExtension = path.extname(filePath).toLowerCase();
+    
+    if (audioExtensions.includes(fileExtension)) {
+      console.log(`Detected audio file, using custom transcription: ${filePath}`);
+      return await this._transcribeAudio(filePath, uvPath);
+    }
+
     // Expand tilde in uvPath if present
     const expandedUvPath = expandHome(uvPath);
 
@@ -39,6 +48,50 @@ export class Markdownify {
     }
 
     return stdout;
+  }
+
+  private static async _transcribeAudio(
+    filePath: string,
+    uvPath: string,
+  ): Promise<string> {
+    // Expand tilde in uvPath if present
+    const expandedUvPath = expandHome(uvPath);
+
+    // Use our custom audio transcription script - find it relative to this module
+    const scriptPath = path.join(path.dirname(__dirname), 'src', 'simple_audio_transcription.py');
+    
+    console.log(`Executing audio transcription: ${expandedUvPath} run python ${scriptPath} ${filePath}`);
+    
+    try {
+      const { stdout, stderr } = await execFileAsync(expandedUvPath, [
+        "run",
+        "python",
+        scriptPath,
+        filePath,
+      ]);
+
+      // Audio transcription warnings are expected, only throw on real errors
+      if (stderr && !stderr.includes('Model loading/transcription failed') && !stderr.includes('Attempting to download')) {
+        console.warn(`Audio transcription stderr: ${stderr}`);
+      }
+
+      return stdout || "# Audio Transcription Failed\n\nCould not transcribe audio file.";
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.warn(`Audio transcription failed: ${errorMessage}`);
+      
+      // Return a meaningful fallback
+      const filename = path.basename(filePath);
+      return `# Audio Transcription (Fallback)
+
+**File:** ${filename}
+**Status:** Transcription service unavailable
+
+## Error Details
+${errorMessage}
+
+**Note:** Audio transcription requires Whisper models which may need to be downloaded on first use.`;
+    }
   }
 
   private static async saveToTempFile(
