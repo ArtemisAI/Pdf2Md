@@ -10,6 +10,8 @@ import { CallToolRequest } from "@modelcontextprotocol/sdk/types.js";
 import is_ip_private from "private-ip";
 import { URL } from "node:url";
 import { transcribeAudio, getTaskStatus, getTranscriptionResult, ConfigManager, ProgressReporter } from "./audio/index.js";
+import { CPUAudioTranscription } from "./audio/CPUAudioTranscription.js";
+import { GPUAudioTranscription } from "./audio/GPUAudioTranscription.js";
 import { saveToTempFile } from "./utils.js";
 
 const RequestPayloadSchema = z.object({
@@ -119,6 +121,84 @@ export function createServer() {
                 projectRoot: validatedArgs.projectRoot,
                 uvPath: validatedArgs.uvPath || process.env.UV_PATH,
               });
+            }
+            break;
+
+          case tools.CPUAudioToMarkdownTool.name:
+            if (!validatedArgs.filepath) {
+              throw new Error("File path is required for CPU audio transcription");
+            }
+
+            try {
+              console.log('Using CPU-only audio transcription...');
+              const cpuTranscriber = new CPUAudioTranscription();
+              
+              const transcriptionResult = await cpuTranscriber.transcribe(
+                validatedArgs.filepath,
+                {
+                  modelSize: (args as any).modelSize || 'base',
+                  language: (args as any).language || 'en'
+                }
+              );
+
+              const markdownContent = `# CPU Audio Transcription\n\n**File:** ${validatedArgs.filepath}\n**Processing Time:** ${transcriptionResult.processingTime}ms\n**Model Used:** ${transcriptionResult.modelUsed}\n**Device:** ${transcriptionResult.device}\n\n## Transcription\n\n${transcriptionResult.text}`;
+              const outputPath = await saveToTempFile(markdownContent);
+
+              result = {
+                path: outputPath,
+                text: markdownContent,
+                processingTime: transcriptionResult.processingTime,
+                modelUsed: transcriptionResult.modelUsed,
+                device: transcriptionResult.device
+              };
+
+              console.log('CPU transcription completed successfully');
+            } catch (error) {
+              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+              throw new Error(`CPU audio transcription failed: ${errorMessage}`);
+            }
+            break;
+
+          case tools.GPUAudioToMarkdownTool.name:
+            if (!validatedArgs.filepath) {
+              throw new Error("File path is required for GPU audio transcription");
+            }
+
+            try {
+              console.log('Using GPU-only audio transcription...');
+              const gpuTranscriber = new GPUAudioTranscription();
+              
+              // Check GPU availability first
+              const gpuStatus = await gpuTranscriber.checkGPUAvailability();
+              if (!gpuStatus.available) {
+                throw new Error(`GPU not available: ${gpuStatus.error}`);
+              }
+
+              const transcriptionResult = await gpuTranscriber.transcribe(
+                validatedArgs.filepath,
+                {
+                  modelSize: (args as any).modelSize || 'base',
+                  language: (args as any).language || 'en',
+                  device: (args as any).device || 'cuda'
+                }
+              );
+
+              const markdownContent = `# GPU Audio Transcription\n\n**File:** ${validatedArgs.filepath}\n**Processing Time:** ${transcriptionResult.processingTime}ms\n**Model Used:** ${transcriptionResult.modelUsed}\n**Device:** ${transcriptionResult.device}\n**GPU Memory:** ${transcriptionResult.gpuMemoryUsed}GB\n\n## Transcription\n\n${transcriptionResult.text}`;
+              const outputPath = await saveToTempFile(markdownContent);
+
+              result = {
+                path: outputPath,
+                text: markdownContent,
+                processingTime: transcriptionResult.processingTime,
+                modelUsed: transcriptionResult.modelUsed,
+                device: transcriptionResult.device,
+                gpuMemoryUsed: transcriptionResult.gpuMemoryUsed
+              };
+
+              console.log('GPU transcription completed successfully');
+            } catch (error) {
+              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+              throw new Error(`GPU audio transcription failed: ${errorMessage}`);
             }
             break;
 

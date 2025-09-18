@@ -94,7 +94,13 @@ export class EnhancedAudioTranscription {
         // Try transcription with current configuration
         return await this.executeTranscription(options, tracker);
         
-      } catch (error) {
+      } catch (error: any) {
+        // Debug: Log the actual error details
+        console.error('🚨 Raw transcription error:', error);
+        console.error('🚨 Error message:', error.message);
+        if (error.stderr) console.error('🚨 Python stderr:', error.stderr);
+        if (error.stdout) console.error('🚨 Python stdout:', error.stdout);
+        
         const transcriptionError = GPUAwareErrorHandler.handle(error, `Attempt ${attempts}`);
         
         tracker.update(20 + attempts * 15, `Attempt ${attempts} failed: ${transcriptionError.message}`);
@@ -113,6 +119,7 @@ export class EnhancedAudioTranscription {
           tracker.stage('optimizing_memory', 'Optimizing memory settings for RTX 3060...');
           this.currentConfig = {
             ...this.currentConfig,
+            modelSize: 'medium', // Fallback to a smaller model
             batch_size: Math.max(1, Math.floor(this.currentConfig.batch_size / 2)),
             chunk_length_s: Math.min(60, this.currentConfig.chunk_length_s + 10)
           };
@@ -142,19 +149,19 @@ export class EnhancedAudioTranscription {
     
     tracker.update(40, 'Python transcription script prepared');
     
-    // Execute enhanced transcription via UV
-    const uvPath = options.uvPath || 'uv';
+    // Execute enhanced transcription via Python virtual environment
+    const pythonPath = options.uvPath || (process.platform === 'win32' ? 'venv\\Scripts\\python.exe' : 'venv/bin/python');
     
     tracker.stage('transcribing', 'Executing GPU-optimized transcription...');
     
     try {
-      const { stdout, stderr } = await execFileAsync(uvPath, [
-        'run',
-        'python',
+      const { stdout, stderr } = await execFileAsync(pythonPath, [
         pythonScript
       ], {
         timeout: 300000, // 5 minute timeout
-        maxBuffer: 10 * 1024 * 1024 // 10MB buffer for large transcriptions
+        maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large transcriptions
+        env: process.env, // Inherit parent process environment for GPU access
+        cwd: process.cwd() // Use current working directory
       });
       
       // Clean up temporary script
@@ -189,9 +196,7 @@ export class EnhancedAudioTranscription {
     const scriptContent = `
 import sys
 import torch
-import torchaudio
 import warnings
-from transformers import pipeline, AutoModelForSpeechSeq2Seq, AutoProcessor
 import json
 import os
 import gc
@@ -201,114 +206,67 @@ from pathlib import Path
 warnings.filterwarnings("ignore")
 
 def detect_optimal_device():
-    """Detect optimal device configuration for RTX 3060 (12GB VRAM)"""
-    if torch.cuda.is_available():
-        device = "cuda:0"
-        torch_dtype = torch.float16
-        
-        try:
-            gpu_props = torch.cuda.get_device_properties(0)
-            gpu_memory = gpu_props.total_memory / (1024**3)
-            gpu_name = gpu_props.name.lower()
-            
-            print(f"Detected GPU: {gpu_props.name} with {gpu_memory:.1f}GB VRAM", file=sys.stderr)
-            
-            # RTX 3060 specific optimizations
-            if "rtx 3060" in gpu_name or gpu_memory >= 12:
-                return {
-                    'device': device,
-                    'torch_dtype': torch_dtype,
-                    'batch_size': ${this.currentConfig.batch_size},
-                    'model_size': '${this.currentConfig.modelSize}',
-                    'gpu_optimized': True
-                }
-            elif gpu_memory >= 8:
-                return {
-                    'device': device,
-                    'torch_dtype': torch_dtype,
-                    'batch_size': ${Math.max(4, this.currentConfig.batch_size - 2)},
-                    'model_size': 'small',
-                    'gpu_optimized': True
-                }
-            elif gpu_memory >= 6:
-                return {
-                    'device': device,
-                    'torch_dtype': torch_dtype,
-                    'batch_size': 4,
-                    'model_size': 'base',
-                    'gpu_optimized': True
-                }
-        except Exception as e:
-            print(f"GPU detection error: {e}", file=sys.stderr)
-    
-    # CPU fallback
-    print("Using CPU fallback", file=sys.stderr)
+    """Detect optimal device configuration for GPU"""
+    # Force CPU mode to avoid cuDNN compatibility issues
+    # TODO: Fix cuDNN version mismatch and re-enable GPU mode
+    print("Using CPU fallback due to cuDNN compatibility issues", file=sys.stderr)
     return {
         'device': 'cpu',
-        'torch_dtype': torch.float32,
-        'batch_size': 4,
+        'compute_type': 'int8',
         'model_size': 'base',
-        'gpu_optimized': False
+        'gpu_optimized': False,
+        'gpu_memory': 0
     }
 
 def transcribe_audio(audio_path, config):
-    """Enhanced audio transcription with RTX 3060 GPU optimization"""
+    """Enhanced audio transcription using faster-whisper (more memory efficient)"""
     try:
-        model_id = f"openai/whisper-{config['model_size']}"
-        print(f"Loading model: {model_id}", file=sys.stderr)
+        from faster_whisper import WhisperModel
         
-        # Load model with optimized settings
-        model = AutoModelForSpeechSeq2Seq.from_pretrained(
-            model_id,
-            torch_dtype=config['torch_dtype'],
-            low_cpu_mem_usage=True,
-            use_safetensors=True
-        )
-        model.to(config['device'])
+        print(f"Loading faster-whisper model: {config['model_size']} on {config['device']}", file=sys.stderr)
         
-        processor = AutoProcessor.from_pretrained(model_id)
-        
-        print(f"Creating pipeline with batch_size={config['batch_size']}", file=sys.stderr)
-        
-        # Create optimized pipeline
-        pipe = pipeline(
-            "automatic-speech-recognition",
-            model=model,
-            tokenizer=processor.tokenizer,
-            feature_extractor=processor.feature_extractor,
-            max_new_tokens=${this.currentConfig.max_new_tokens},
-            chunk_length_s=${this.currentConfig.chunk_length_s},
-            batch_size=config['batch_size'],
-            torch_dtype=config['torch_dtype'],
-            device=config['device'],
-            return_timestamps=${this.currentConfig.without_timestamps ? 'False' : 'True'}
+        # Load model with faster-whisper
+        model = WhisperModel(
+            config['model_size'], 
+            device=config['device'], 
+            compute_type=config['compute_type']
         )
         
-        print("Starting transcription...", file=sys.stderr)
+        print("Starting transcription with faster-whisper...", file=sys.stderr)
         
-        # Transcribe audio with RTX 3060 optimized settings
-        result = pipe(
+        # Transcribe with faster-whisper
+        segments, info = model.transcribe(
             audio_path,
-            generate_kwargs={
-                "language": "${actualLanguage}",
-                "temperature": ${this.currentConfig.temperature},
-                "compression_ratio_threshold": ${this.currentConfig.compression_ratio_threshold},
-                "logprob_threshold": ${this.currentConfig.logprob_threshold},
-                "no_speech_threshold": ${this.currentConfig.no_speech_threshold},
-                "condition_on_previous_text": ${this.currentConfig.condition_on_previous_text}
-            }
+            language="${actualLanguage}" if "${actualLanguage}" != "auto" else None,
+            temperature=${this.currentConfig.temperature},
+            compression_ratio_threshold=${this.currentConfig.compression_ratio_threshold},
+            log_prob_threshold=${this.currentConfig.logprob_threshold},
+            no_speech_threshold=${this.currentConfig.no_speech_threshold},
+            condition_on_previous_text=${this.currentConfig.condition_on_previous_text ? 'True' : 'False'},
+            beam_size=${this.currentConfig.beam_size},
+            patience=${this.currentConfig.patience},
+            length_penalty=${this.currentConfig.length_penalty},
+            suppress_blank=${this.currentConfig.suppress_blank ? 'True' : 'False'},
+            word_timestamps=${this.currentConfig.word_timestamps ? 'True' : 'False'}
         )
+        
+        # Extract text from segments
+        transcription_text = ""
+        for segment in segments:
+            transcription_text += segment.text
         
         # Clean up GPU memory
-        if config['device'].startswith('cuda'):
+        if config['device'] == 'cuda':
             torch.cuda.empty_cache()
             gc.collect()
         
-        print("Transcription completed successfully", file=sys.stderr)
-        return result["text"]
+        print("Transcription completed successfully with faster-whisper", file=sys.stderr)
+        return transcription_text.strip()
         
     except Exception as e:
-        print(f"Transcription error: {str(e)}", file=sys.stderr)
+        print(f"faster-whisper transcription error: {str(e)}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
         raise
 
 def main():
@@ -423,7 +381,11 @@ if __name__ == "__main__":
       await fs.promises.writeFile(tempScriptPath, durationScript);
       
       try {
-        const { stdout } = await execFileAsync('uv', ['run', 'python', tempScriptPath]);
+        const pythonPath = process.platform === 'win32' ? 'venv\\Scripts\\python.exe' : 'venv/bin/python';
+        const { stdout } = await execFileAsync(pythonPath, [tempScriptPath], {
+          env: process.env, // Inherit parent process environment for GPU access
+          cwd: process.cwd()
+        });
         await fs.promises.unlink(tempScriptPath);
         
         const duration = parseFloat(stdout.trim());

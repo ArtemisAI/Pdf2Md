@@ -7,18 +7,9 @@
     }
   ],
   "servers": {
-    "Pdf2Md": {
-      "command": "node",
-      "args": [
-        "dist/index.js"
-      ],
-      "type": "stdio",
-      "env": {
-        "KMP_DUPLICATE_LIB_OK": "TRUE",
-        "OMP_NUM_THREADS": "4",
-        "UV_PATH": "uv",
-        "NODE_ENV": "development"
-      }
+    "Pdf2Md-HTTP": {
+      "url": "http://localhost:3000/mcp",
+      "type": "http"
     },
     "huggingface": {
       "url": "https://hf.co/mcp",

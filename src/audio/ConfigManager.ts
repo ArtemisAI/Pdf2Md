@@ -4,6 +4,7 @@
  */
 
 import { TranscriptionConfig, DeviceInfo, GPUConfig } from '../types/audio.js';
+import { execFileSync } from 'child_process';
 
 export class ConfigManager {
   /**
@@ -58,9 +59,9 @@ export class ConfigManager {
    */
   private static detectOptimalDevice(): DeviceInfo {
     const cudaAvailable = this.checkCUDAAvailability();
-    const gpuMemory = this.getGPUMemory();
+    const gpuMemory = this._getGpuMemoryFromPython();
     
-    if (cudaAvailable) {
+    if (cudaAvailable && gpuMemory > 0) {
       // RTX 3060 has 12GB VRAM - optimize accordingly
       if (gpuMemory >= 12 || this.isRTX3060()) {
         return {
@@ -144,20 +145,21 @@ export class ConfigManager {
   /**
    * Get GPU memory in GB
    */
-  private static getGPUMemory(): number {
-    // Try to get GPU memory from environment or default to RTX 3060 specs
-    const envMemory = process.env.GPU_MEMORY_GB;
-    if (envMemory) {
-      return parseInt(envMemory, 10);
+  private static _getGpuMemoryFromPython(): number {
+    try {
+      const pythonScript = `
+import torch
+if torch.cuda.is_available():
+    print(torch.cuda.get_device_properties(0).total_memory / (1024**3))
+else:
+    print(0)
+      `;
+      const result = execFileSync('python3', ['-c', pythonScript], { encoding: 'utf8' });
+      return parseFloat(result.trim());
+    } catch (error) {
+      console.warn('Could not get GPU memory from Python, defaulting to 0:', error);
+      return 0;
     }
-    
-    // Default assumption for RTX 3060
-    if (this.isRTX3060()) {
-      return 12;
-    }
-    
-    // Conservative default - assume RTX 3060 level
-    return 12;
   }
 
   /**

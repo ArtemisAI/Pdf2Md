@@ -15,9 +15,9 @@ async function testBasicAudio() {
   console.log('===========================================\n');
 
   try {
-    // Import the basic audio system
-    const { Markdownify } = await import('./dist/Markdownify.js');
-    console.log('✅ Basic audio module loaded');
+    // Import the enhanced audio transcription system
+    const { EnhancedAudioTranscription } = await import('./dist/audio/index.js');
+    console.log('✅ Enhanced audio module loaded');
 
     // Test file
     const audioPath = path.join(__dirname, 'tests', 'audio_samples', 'github_friendly', 'test_002_duration_21kb.mp3');
@@ -28,15 +28,20 @@ async function testBasicAudio() {
     console.log(`\n🚀 Starting basic transcription...`);
     const startTime = Date.now();
 
-    const markdownify = new Markdownify();
-    const result = await markdownify.audioToMarkdown(audioPath);
+    const transcriber = new EnhancedAudioTranscription();
+    const result = await transcriber.transcribe({
+      filepath: audioPath,
+      uvPath: process.env.UV_PATH || 'uv'
+    });
 
     const duration = Date.now() - startTime;
     console.log(`✅ Transcription completed in ${duration}ms`);
-    console.log(`📝 Result length: ${result?.length || 0} characters`);
+    console.log(`📝 Result length: ${result?.text?.length || 0} characters`);
+    console.log(`🌍 Detected language: ${result?.language || 'unknown'}`);
+    console.log(`⏱️  Audio duration: ${result?.duration ? Math.round(result.duration) + 's' : 'unknown'}`);
 
-    if (result && result.length > 0) {
-      console.log(`📄 Content preview: ${result.substring(0, 200)}...`);
+    if (result && result.text && result.text.length > 0) {
+      console.log(`📄 Content preview: ${result.text.substring(0, 200)}...`);
     } else {
       console.log('⚠️  No transcription content returned');
     }

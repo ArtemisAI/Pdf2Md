@@ -1,13 +1,8 @@
 {
   "mcpServers": {
     "Pdf2Md": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "tsx",
-        "G:/projects/_Tools/_MCP/Pdf2Md/src/index.ts"
-      ],
-      "type": "stdio",
+      "type": "streamable-http",
+      "url": "http://localhost:3000/mcp/",
       "alwaysAllow": [
         "audio-to-markdown",
         "bing-search-to-markdown",
@@ -18,15 +13,18 @@
         "pptx-to-markdown",
         "webpage-to-markdown",
         "xlsx-to-markdown",
-        "youtube-to-markdown"
+        "youtube-to-markdown",
+        "cpu-audio-to-markdown",
+        "gpu-audio-to-markdown",
+        "enhanced-audio-to-markdown",
+        "audio-transcription-status"
       ],
-      "timeout": 300
-    },
-    "huggingface": {
-      "type": "http",
-      "protocol": "https",
-      "host": "hf.co",
-      "path": "/mcp",
+      "headers": {
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream",
+        "User-Agent": "Roo-MCP-Client/1.0",
+        "X-MCP-Client": "Roo"
+      },
       "timeout": 300
     }
   }

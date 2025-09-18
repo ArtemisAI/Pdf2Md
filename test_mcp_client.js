@@ -148,7 +148,7 @@ async function testEnhancedAudioMCP() {
     
     // Test 2: Test original audio tool (backward compatibility)
     console.log('\n🔄 Test 2: Testing original audio tool...');
-    const audioPath = path.join(__dirname, 'tests', 'test_audio.mp3');
+    const audioPath = path.join(__dirname, 'tests', 'audio_samples', 'github_friendly', 'test_002_duration_21kb.mp3');
     console.log(`📁 Testing with file: ${audioPath}`);
     console.log(`📏 File size: ~15MB`);
     

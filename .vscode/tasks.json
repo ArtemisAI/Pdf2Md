@@ -1,0 +1,163 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "pnpm",
+            "args": ["run", "build"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": "$tsc"
+        },
+        {
+            "label": "dev",
+            "type": "shell", 
+            "command": "pnpm",
+            "args": ["run", "dev"],
+            "group": "build",
+            "isBackground": true,
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": "$tsc-watch"
+        },
+        {
+            "label": "start",
+            "type": "shell",
+            "command": "node",
+            "args": ["dist/index.js"],
+            "group": "build",
+            "dependsOn": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            }
+        },
+        {
+            "label": "test-mcp",
+            "type": "shell",
+            "command": "node",
+            "args": ["test_mcp_client.js"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            }
+        },
+        {
+            "label": "test-audio",
+            "type": "shell",
+            "command": "node", 
+            "args": ["test_direct_enhanced_audio.js"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            }
+        },
+        {
+            "label": "validate-env",
+            "type": "shell",
+            "command": "python",
+            "args": ["validate_environment.py"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            }
+        },
+        {
+            "label": "clean",
+            "type": "shell",
+            "command": "rm",
+            "args": ["-rf", "dist"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "silent",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            }
+        },
+        {
+            "label": "check-gpu",
+            "type": "shell",
+            "command": "python",
+            "args": ["docs/testing/check_cuda.py"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared", 
+                "showReuseMessage": true,
+                "clear": false
+            }
+        },
+        {
+            "label": "docker-build",
+            "type": "shell",
+            "command": "docker",
+            "args": ["build", "-t", "pdf2md-server", "."],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            }
+        },
+        {
+            "label": "docker-run",
+            "type": "shell",
+            "command": "docker",
+            "args": ["run", "-it", "--rm", "-p", "8080:8080", "pdf2md-server"],
+            "group": "test",
+            "dependsOn": "docker-build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "new",
+                "showReuseMessage": true,
+                "clear": false
+            }
+        }
+    ]
+}

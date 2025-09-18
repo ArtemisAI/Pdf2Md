@@ -100,13 +100,76 @@ export const ImageToMarkdownTool = ToolSchema.parse({
 export const AudioToMarkdownTool = ToolSchema.parse({
   name: "audio-to-markdown",
   description:
-    "Convert an audio file to markdown with GPU-accelerated transcription if available, including automatic fallback to CPU processing",
+    "Convert an audio file to markdown with automatic GPU/CPU fallback (legacy compatibility tool)",
   inputSchema: {
     type: "object",
     properties: {
       filepath: {
         type: "string",
         description: "Absolute path of the audio file to convert",
+      },
+      uvPath: {
+        type: "string",
+        description: "Path to the uv executable (optional, defaults to 'uv')",
+      },
+    },
+    required: ["filepath"],
+  },
+});
+
+// CPU-Only Audio Transcription Tool
+export const CPUAudioToMarkdownTool = ToolSchema.parse({
+  name: "cpu-audio-to-markdown",
+  description: "Convert an audio file to markdown using CPU-only transcription (reliable, slower)",
+  inputSchema: {
+    type: "object",
+    properties: {
+      filepath: {
+        type: "string",
+        description: "Absolute path of the audio file to convert",
+      },
+      language: {
+        type: "string",
+        description: "Language code for transcription (e.g., 'en', 'es', 'fr'). Defaults to 'en'",
+      },
+      modelSize: {
+        type: "string",
+        enum: ["tiny", "base", "small", "medium"],
+        description: "Whisper model size optimized for CPU. Default: 'base'",
+      },
+      uvPath: {
+        type: "string",
+        description: "Path to the uv executable (optional, defaults to 'uv')",
+      },
+    },
+    required: ["filepath"],
+  },
+});
+
+// GPU-Only Audio Transcription Tool  
+export const GPUAudioToMarkdownTool = ToolSchema.parse({
+  name: "gpu-audio-to-markdown",
+  description: "Convert an audio file to markdown using GPU-accelerated transcription (fast, requires compatible GPU and cuDNN)",
+  inputSchema: {
+    type: "object",
+    properties: {
+      filepath: {
+        type: "string",
+        description: "Absolute path of the audio file to convert",
+      },
+      language: {
+        type: "string",
+        description: "Language code for transcription (e.g., 'en', 'es', 'fr'). Defaults to 'en'",
+      },
+      modelSize: {
+        type: "string",
+        enum: ["tiny", "base", "small", "medium", "large", "large-v2", "large-v3"],
+        description: "Whisper model size. Auto-selected based on GPU memory if not specified",
+      },
+      device: {
+        type: "string",
+        enum: ["cuda", "cuda:0", "cuda:1"],
+        description: "GPU device to use for transcription. Default: 'cuda'",
       },
       uvPath: {
         type: "string",

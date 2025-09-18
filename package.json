@@ -18,11 +18,14 @@
     "dev": "tsc --watch",
     "preinstall": "node preinstall.js",
     "start": "node dist/index.js",
+    "start:stdio": "node dist/index.js",
+    "start:http": "node dist/index.js --http",
+    "dev:http": "tsc --watch & node dist/index.js --http",
     "test": "bun test",
     "test:watch": "bun test --watch"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.0.1",
+    "@modelcontextprotocol/sdk": "^1.18.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "express-rate-limit": "^8.1.0",
@@ -40,9 +43,11 @@
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.18.1",
+    "@types/node-fetch": "^2.6.13",
     "@types/private-ip": "^1.0.3",
     "@types/uuid": "^10.0.0",
     "bun": "^1.1.41",
+    "node-fetch": "^3.3.2",
     "shx": "^0.3.4",
     "ts-jest": "^29.2.5",
     "typescript": "^5.6.2"
