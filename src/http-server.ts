@@ -91,6 +91,12 @@ app.all('/mcp', async (req, res) => {
 // JSON parsing middleware (for non-MCP routes)
 app.use(express.json({ limit: '10mb' }));
 
+// Health check endpoints
+// Note: These are dummy stores for now. In a real implementation,
+// you would pass in your actual Redis stores.
+const healthRouter = createHealthEndpoints(new RedisSessionStore(), new RedisEventStore());
+app.use('/health', healthRouter);
+
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {

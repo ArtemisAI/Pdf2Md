@@ -34,4 +34,22 @@ RUN pnpm install --production
 # Copy the built application
 COPY --from=builder /app/dist ./dist
 
-ENTRYPOINT ["node", "dist/index.js"]
+# Expose the HTTP port
+EXPOSE 3000
+
+# Add health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
+
+# Set environment variables for HTTP mode
+ENV MCP_TRANSPORT=http
+ENV HOST=0.0.0.0
+ENV PORT=3000
+ENV PYTHONUTF8=1
+ENV NODE_ENV=production
+
+# Create directories for file processing
+RUN mkdir -p /app/uploads /app/output /app/temp
+
+# Change the default command to HTTP mode
+CMD ["node", "dist/index.js", "--http"]
