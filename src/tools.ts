@@ -79,17 +79,16 @@ export const WebpageToMarkdownTool = ToolSchema.parse({
 
 export const ImageToMarkdownTool = ToolSchema.parse({
   name: "image-to-markdown",
-  description:
-    "Convert an image to markdown, including metadata and description",
+  description: "Convert an image to markdown using OCR (Optical Character Recognition) to extract text content. Supports JPEG, PNG, BMP, TIFF, WebP formats. Returns extracted text with image metadata and processing details.",
   inputSchema: {
     type: "object",
     properties: {
       filepath: {
         type: "string",
-        description: "Absolute path of the image file to convert",
+        description: "Absolute path of the image file to convert (supports: .jpg, .jpeg, .png, .bmp, .tiff, .webp)",
       },
       uvPath: {
-        type: "string",
+        type: "string", 
         description: "Path to the uv executable (optional, defaults to 'uv')",
       },
     },
