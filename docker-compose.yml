@@ -1,0 +1,71 @@
+services:
+  pdf2md-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${MCP_PORT:-3000}:3000"
+    environment:
+      # MCP Server Configuration
+      - MCP_TRANSPORT=http
+      - PORT=3000
+      - HOST=0.0.0.0
+      
+      # CORS Configuration (adjust as needed for your client domains)
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+      
+      # Python Configuration for audio/OCR processing
+      - PYTHONUTF8=1
+      - UV_PATH=/app/.local/bin/uv
+      
+      # GPU Configuration (uncomment if GPU support is needed)
+      # - CUDA_VISIBLE_DEVICES=0
+      # - KMP_DUPLICATE_LIB_OK=TRUE
+      # - OMP_NUM_THREADS=4
+      
+      # Optional: Redis configuration for session storage
+      # - REDIS_URL=redis://redis:6379
+      
+    volumes:
+      # Mount local directories for file processing (adjust paths as needed)
+      - "${UPLOAD_DIR:-./uploads}:/app/uploads"
+      - "${OUTPUT_DIR:-./output}:/app/output"
+      
+      # Optional: Mount shared directory for markdown files
+      - "${MD_SHARE_DIR:-./shared}:/app/shared"
+      
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Resource limits (adjust based on your needs)
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # Optional: Redis for session/event storage (uncomment if needed)
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   restart: unless-stopped
+  #   command: redis-server --appendonly yes
+
+# Optional: Redis volume (uncomment if using Redis)
+# volumes:
+#   redis_data:
+
+networks:
+  default:
+    name: pdf2md-network

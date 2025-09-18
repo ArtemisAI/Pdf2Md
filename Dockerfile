@@ -2,13 +2,13 @@
 FROM node:current-alpine3.22 AS base
 WORKDIR /app
 
-# Install dependencies
+# Install dependencies including curl for health checks
 RUN apk add --no-cache python3 curl bash
 
 # Copy the source code
 COPY . .
 # Remove the python version, otherwise it won't find python
-RUN rm .python-version
+RUN rm -f .python-version
 
 # Enable pnpm
 RUN corepack enable
@@ -34,4 +34,21 @@ RUN pnpm install --production
 # Copy the built application
 COPY --from=builder /app/dist ./dist
 
-ENTRYPOINT ["node", "dist/index.js"]
+# Create directories for file processing
+RUN mkdir -p /app/uploads /app/output /app/shared
+
+# Expose the HTTP port
+EXPOSE 3000
+
+# Health check endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
+
+# Set default environment variables
+ENV MCP_TRANSPORT=http
+ENV PORT=3000
+ENV HOST=0.0.0.0
+ENV PYTHONUTF8=1
+
+# Default to HTTP mode but allow override
+ENTRYPOINT ["node", "dist/index.js", "--http"]

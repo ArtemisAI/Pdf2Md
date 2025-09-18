@@ -2,13 +2,46 @@
 
 **Repository:** https://github.com/ArtemisAI/Pdf2Md
 
-> Help! I need someone with a Windows computer to help me add support for Markdownify-MCP on Windows. PRs exist but I cannot test them. Post [here](https://github.com/zcaceres/markdownify-mcp/issues/18) if interested.
-
 ![markdownify mcp logo](logo.jpg)
 
-Markdownify is a Model Context Protocol (MCP) server that converts various file types and web content to Markdown format. It provides a set of tools to transform PDFs, images, audio files, web pages, and more into easily readable and shareable Markdown text.
+Markdownify is a Model Context Protocol (MCP) server that converts various file types and web content to Markdown format. This ArtemisAI fork includes **Docker Compose deployment** for external access and **GPU-accelerated audio transcription**.
 
 <a href="https://glama.ai/mcp/servers/bn5q4b0ett"><img width="380" height="200" src="https://glama.ai/mcp/servers/bn5q4b0ett/badge" alt="Markdownify Server MCP server" /></a>
+
+## 🚀 Quick Start with Docker Compose
+
+The fastest way to get started is with Docker Compose:
+
+```bash
+# Clone and setup
+git clone https://github.com/ArtemisAI/Pdf2Md.git
+cd Pdf2Md
+cp .env.example .env
+
+# Start the server  
+docker-compose up -d
+
+# Verify it's working
+curl http://localhost:3000/health
+```
+
+**MCP Server URL:** `http://localhost:3000/mcp` (streamable-http transport)
+
+### Configure Your IDE
+
+**VS Code / GitHub Copilot:**
+```json
+{
+  "servers": {
+    "Pdf2Md": {
+      "url": "http://localhost:3000/mcp",
+      "type": "http"
+    }
+  }
+}
+```
+
+**Roo Code:** Already configured at `.roo/mcp.json`
 
 ## Repository
 
@@ -17,14 +50,14 @@ This is the ArtemisAI fork of the Markdownify MCP Server.
 - **Original Repository:** https://github.com/zcaceres/markdownify-mcp
 - **ArtemisAI Fork:** https://github.com/ArtemisAI/Pdf2Md
 
-This fork focuses on Windows compatibility and includes additional testing and documentation.
+This fork focuses on Docker deployment, Windows compatibility, and GPU acceleration.
 
 ## Features
 
 - Convert multiple file types to Markdown:
   - PDF
-  - Images
-  - Audio (with transcription)
+  - Images (with OCR)
+  - Audio (with transcription and **🆕 GPU acceleration**)
   - DOCX
   - XLSX
   - PPTX
@@ -33,8 +66,8 @@ This fork focuses on Windows compatibility and includes additional testing and d
   - Web pages
   - Bing search results
 - Retrieve existing Markdown files
-- **🚀 NEW: GPU-accelerated audio transcription** (19.4x real-time speed on RTX 3060)
-- **🔄 IN PROGRESS: HTTP-streamable architecture** for always-available service
+- **🆕 Docker Compose deployment** for external access
+- **🆕 HTTP-streamable architecture** for always-available service
 
 ## 📋 Change Request System
 
@@ -45,9 +78,9 @@ This project uses a structured change request system for development planning an
 - **📊 Tracking**: `.github/change-requests/CHANGE_REQUEST_TRACKING.md`
 
 ### Current Status
-- **Active**: [CHANGE_REQUEST_3_MCP_HTTP.md](.github/change-requests/CHANGE_REQUEST_3_MCP_HTTP.md) - Converting to HTTP-streamable architecture
-- **Completed**: GPU integration, initial setup
-- **Branch**: `HTTP-MCP`
+- **✅ Completed**: Docker Compose deployment, HTTP-streamable MCP server
+- **✅ Completed**: GPU integration (19.4x real-time transcription speed)
+- **🔄 Active**: Documentation and integration guides
 
 See [Change Request Tracking](.github/change-requests/CHANGE_REQUEST_TRACKING.md) for full details.
 - Convert web content to Markdown:
