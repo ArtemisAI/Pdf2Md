@@ -91,6 +91,39 @@ app.all('/mcp', async (req, res) => {
 // JSON parsing middleware (for non-MCP routes)
 app.use(express.json({ limit: '10mb' }));
 
+// Health check endpoints (for Docker and monitoring)
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: process.env.npm_package_version || '0.0.2',
+    mode: 'http-streamable'
+  });
+});
+
+app.get('/health/detailed', (req, res) => {
+  const memoryUsage = process.memoryUsage();
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: process.env.npm_package_version || '0.0.2',
+    mode: 'http-streamable',
+    system: {
+      memory: {
+        rss: Math.round(memoryUsage.rss / 1024 / 1024), // MB
+        heapTotal: Math.round(memoryUsage.heapTotal / 1024 / 1024), // MB  
+        heapUsed: Math.round(memoryUsage.heapUsed / 1024 / 1024), // MB
+        external: Math.round(memoryUsage.external / 1024 / 1024) // MB
+      },
+      node: process.version,
+      platform: process.platform,
+      arch: process.arch
+    },
+    sessions: Object.keys(transports).length
+  });
+});
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
